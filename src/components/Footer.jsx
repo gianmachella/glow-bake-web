@@ -49,14 +49,20 @@ export default function Footer() {
           </p>
           <p className="text-sm mb-3">📱 (945) 400-5808</p>
           <div className="flex justify-center md:justify-start gap-4">
-            <a href="#" className="hover:text-pink-600">
+            <a
+              href="https://www.instagram.com/glow.bake/"
+              className="hover:text-pink-600"
+            >
               <img
                 src="/images/instagram.png"
                 alt="Instagram"
                 className="h-6"
               />
             </a>
-            <a href="#" className="hover:text-pink-600">
+            <a
+              href="https://www.instagram.com/glow.bake/"
+              className="hover:text-pink-600"
+            >
               <img src="/images/facebook.png" alt="Facebook" className="h-6" />
             </a>
           </div>
