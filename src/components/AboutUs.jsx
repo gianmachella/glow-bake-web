@@ -4,19 +4,32 @@ import { useEffect, useState } from "react";
 
 export default function AboutUs() {
   const [offsetY, setOffsetY] = useState(0);
+  const [speed, setSpeed] = useState(0.15);
 
   useEffect(() => {
     const handleScroll = () => {
       setOffsetY(window.pageYOffset);
     };
+
+    // Ajustar velocidad según tamaño de pantalla
+    const updateSpeed = () => {
+      setSpeed(window.innerWidth < 768 ? 0.3 : 0.15);
+    };
+
+    updateSpeed(); // inicial
+    window.addEventListener("resize", updateSpeed);
     window.addEventListener("scroll", handleScroll);
-    return () => window.removeEventListener("scroll", handleScroll);
+
+    return () => {
+      window.removeEventListener("resize", updateSpeed);
+      window.removeEventListener("scroll", handleScroll);
+    };
   }, []);
 
   return (
     <section
       id="about"
-      className="relative w-full pt-32 px-6 pb-20 bg-pink-50 overflow-hidden"
+      className="relative w-full min-h-[2300px] md:min-h-0 pt-32 px-6 pb-20 bg-pink-50 overflow-hidden"
     >
       <h2 className="text-center text-3xl md:text-5xl font-script text-pink-700 mb-12">
         About Us
@@ -65,8 +78,8 @@ export default function AboutUs() {
 
         {/* Imagen con parallax */}
         <div
-          className="w-full flex justify-center z-10 mt-[-300px]"
-          style={{ transform: `translateY(${offsetY * 0.15}px)` }}
+          className="w-full flex justify-center z-10 mt-[-600px] md:mt-[-300px]"
+          style={{ transform: `translateY(${offsetY * speed}px)` }}
         >
           <img
             src="/images/cookies/cookies-tower.png"

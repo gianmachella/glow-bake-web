@@ -1,9 +1,19 @@
-export default function ParallaxBanner({ imageClass }) {
+// src/components/ParallaxBanner.jsx
+
+export default function ParallaxBanner({ image, position = "center" }) {
   return (
-    <div className="relative w-full h-[200px] overflow-hidden z-10 pointer-events-none">
-      <div
-        className={`absolute inset-0 bg-cover bg-center will-change-transform bg-fixed ${imageClass}`}
-      />
-    </div>
+    <div
+      className="h-[200px] bg-fixed bg-no-repeat bg-cover"
+      style={{
+        backgroundImage: `url(${image})`,
+        backgroundPosition:
+          position === "left"
+            ? "left center"
+            : position === "right"
+            ? "right center"
+            : "center",
+        backgroundSize: "cover",
+      }}
+    />
   );
 }

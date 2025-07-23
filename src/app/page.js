@@ -11,11 +11,11 @@ export default function Home() {
     <main>
       <Hero />
       <AboutUs />
-      <ParallaxBanner imageClass="bg-banner1" />
+      <ParallaxBanner image="/images/banners/banner-1.png" position="left" />
       <MenuSection />
-      <ParallaxBanner imageClass="bg-banner2" />
+      <ParallaxBanner image="/images/banners/banner-2.png" position="right" />
       <Testimonials />
-      <ParallaxBanner imageClass="bg-banner3" />
+      <ParallaxBanner image="/images/banners/banner-3.png" position="left" />
       <ContactSection />
       <Footer />
     </main>

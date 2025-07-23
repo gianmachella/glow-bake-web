@@ -32,13 +32,13 @@ export default function Hero() {
         <img
           src="/images/banners/cookies-basket.png"
           alt="Cookies Basket"
-          className="w-[600px] md:w-[800px] lg:w-[1300px] object-contain"
+          className="w-[500px] sm:w-[700px] md:w-[800px] lg:w-[1200px] object-contain max-w-none"
         />
       </div>
 
       {/* Logo Glow Bake */}
       <div
-        className="absolute inset-0 flex items-start justify-center pt-15 md:pt-15 z-20"
+        className="absolute inset-0 flex items-start justify-center pt-50 sm:pt-20 z-20"
         style={{
           transform: `translateY(${offsetY * 0.4}px)`,
         }}
