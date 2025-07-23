@@ -44,7 +44,7 @@ export default function Hero() {
         }}
       >
         <img
-          src="/images/banners/glow Bake.png"
+          src="/images/banners/Glow Bake.png"
           alt="Glow Bake Logo"
           className="w-[600px] md:w-[800px] lg:w-[500px] object-contain"
         />
