@@ -7,7 +7,7 @@ export default function Footer() {
           <img
             src="/images/logo-gb.png"
             alt="Glow Bake Logo"
-            className="h-10 mx-auto md:mx-0 mb-4"
+            className="h-40 mx-auto md:mx-0 mb-4"
           />
           <p className="text-sm italic">So Sweet. So Handmade. So Glow Bake.</p>
         </div>
@@ -17,18 +17,23 @@ export default function Footer() {
           <h3 className="font-semibold mb-3 text-pink-700">Quick Links</h3>
           <ul className="space-y-1 text-sm">
             <li>
-              <a href="/menu" className="hover:text-pink-600">
+              <a href="#menu" className="hover:text-pink-600">
                 Menu
               </a>
             </li>
             <li>
-              <a href="/about" className="hover:text-pink-600">
+              <a href="#about" className="hover:text-pink-600">
                 About
               </a>
             </li>
             <li>
-              <a href="/cart" className="hover:text-pink-600">
-                Cart
+              <a href="#testimonials" className="hover:text-pink-600">
+                Testimonials
+              </a>
+            </li>
+            <li>
+              <a href="#contact" className="hover:text-pink-600">
+                Contact us
               </a>
             </li>
           </ul>
@@ -38,14 +43,21 @@ export default function Footer() {
         <div>
           <h3 className="font-semibold mb-3 text-pink-700">Contact Us</h3>
           <p className="text-sm mb-1">📍 Princeton, TX</p>
-          <p className="text-sm mb-1">📧 glowbake@email.com</p>
-          <p className="text-sm mb-3">📱 (123) 456-7890</p>
+          <p className="text-sm mb-1 flex">
+            <img src="/images/gmail.png" alt="gmail" className="h-6" />{" "}
+            glow.bake.tx@gmail.com
+          </p>
+          <p className="text-sm mb-3">📱 (945) 400-5808</p>
           <div className="flex justify-center md:justify-start gap-4">
             <a href="#" className="hover:text-pink-600">
-              <img src="/icons/instagram.svg" alt="Instagram" className="h-6" />
+              <img
+                src="/images/instagram.png"
+                alt="Instagram"
+                className="h-6"
+              />
             </a>
             <a href="#" className="hover:text-pink-600">
-              <img src="/icons/facebook.svg" alt="Facebook" className="h-6" />
+              <img src="/images/facebook.png" alt="Facebook" className="h-6" />
             </a>
           </div>
         </div>
@@ -55,7 +67,7 @@ export default function Footer() {
           <h3 className="font-semibold mb-3 text-pink-700">Let’s Talk</h3>
           <p className="text-sm mb-3">Have a question or a custom order?</p>
           <a
-            href="https://wa.me/1XXXXXXXXXX"
+            href="https://wa.me/19454005808"
             target="_blank"
             rel="noopener noreferrer"
             className="inline-block px-4 py-2 bg-pink-600 text-white rounded-full text-sm hover:bg-pink-700 transition"
