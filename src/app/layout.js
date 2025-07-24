@@ -1,5 +1,6 @@
 import "./globals.css";
 
+import { CartProvider } from "@/context/CartContext";
 import { Great_Vibes } from "next/font/google";
 import { Inter } from "next/font/google";
 import Navbar from "@/components/Navbar";
@@ -35,8 +36,10 @@ export default function RootLayout({ children }) {
       </head>
 
       <body style={{ fontFamily: "'Happy Monkey', cursive" }}>
-        <Navbar />
-        {children}
+        <CartProvider>
+          <Navbar />
+          {children}
+        </CartProvider>
       </body>
     </html>
   );

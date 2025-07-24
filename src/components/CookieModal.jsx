@@ -2,9 +2,12 @@
 
 import { useEffect, useState } from "react";
 
+import { useCart } from "@/context/CartContext"; // 👈 Importa tu contexto
+
 export default function CookieModal({ cookie, onClose }) {
   const [current, setCurrent] = useState(0);
   const [quantity, setQuantity] = useState(1);
+  const { addToCart } = useCart(); // 👈 Hook del contexto
 
   useEffect(() => {
     const interval = setInterval(() => {
@@ -14,8 +17,8 @@ export default function CookieModal({ cookie, onClose }) {
   }, [cookie.images.length]);
 
   const handleAddToCart = () => {
-    console.log(`Added ${quantity} x ${cookie.name} to cart`);
-    onClose(); // o déjalo si prefieres no cerrarla
+    addToCart({ ...cookie, quantity }); // 👈 Agrega al carrito
+    onClose(); // Cierra el modal
   };
 
   return (
