@@ -36,7 +36,7 @@ export default function CookieModal({ cookie, onClose }) {
           <img
             src={cookie.images[current]}
             alt={cookie.name}
-            className="w-full h-auto object-contain transition-all duration-700"
+            className="w-full h-auto object-contain transition-all duration-500"
           />
         </div>
 

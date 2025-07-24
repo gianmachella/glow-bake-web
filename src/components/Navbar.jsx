@@ -25,7 +25,7 @@ export default function Navbar() {
             <img
               src="/images/logo-gb.png"
               alt="Glow Bake Logo"
-              className="h-8 w-auto"
+              className="h-8 w-auto hover:scale-145 transition-transform duration-200"
             />
             <img
               src="/images/banners/Glow Bake.png"

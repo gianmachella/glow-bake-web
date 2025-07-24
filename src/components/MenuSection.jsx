@@ -42,7 +42,7 @@ const cookies = [
     image: "/images/cookies/birthdayCake.png",
     images: [
       "/images/cookies/birthdayCake.png",
-      "/images/cookies/birthdayCake-cut.png",
+      "/images/cookies/birthdaycake-cut.png",
     ],
     description:
       "Like a party in your mouth – sweet vanilla, colorful sprinkles, and pure celebration.",
