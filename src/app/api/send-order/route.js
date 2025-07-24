@@ -10,7 +10,7 @@ export async function POST(req) {
     return new Response("Invalid email", { status: 400 });
   }
 
-  const resend = new Resend(process.env.RESEND_API_KEY);
+  const resend = new Resend(re_19Q7Hfn8_M244cDRgMMCpuYmRCju4og25);
 
   const itemList = items
     .map(
