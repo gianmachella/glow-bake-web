@@ -22,7 +22,7 @@ export async function POST(req) {
   const htmlMessage = `
   <div style="font-family: Arial, sans-serif; max-width: 600px; margin: auto; border: 1px solid #eee; padding: 20px; border-radius: 10px;">
     <div style="text-align: center;">
-      <img src="https://glowbake.com/images/logo-gb.png" alt="Glow Bake" style="max-width: 200px; margin-bottom: 20px;" />
+      <img src="https://glowbake.com/images/logo-circle.png" alt="Glow Bake" style="max-width: 200px; margin-bottom: 20px;" />
       <h2 style="color: #d63384;">Thank you for your order, ${name} ${lastName}!</h2>
     </div>
 
