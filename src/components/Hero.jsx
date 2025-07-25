@@ -2,6 +2,8 @@
 
 import { useEffect, useState } from "react";
 
+import Swal from "sweetalert2";
+
 const cookies = [
   {
     src: "/images/cookies/cookie-1.png",
@@ -59,6 +61,26 @@ export default function Hero() {
   const [isMobile, setIsMobile] = useState(false);
 
   useEffect(() => {
+    Swal.fire({
+      title:
+        '<img src="/images/banners/Glow Bake.png" alt="Glow Bake Logo" style="max-width: 200px; margin-bottom: 1rem;" />',
+      html: `
+        <h2 style="margin-bottom: 0.5rem;">Remember!</h2>
+        <p style="text-align: left;">
+          Orders are accepted from <b>Monday to Wednesday</b> for delivery on <b>Thursday and Friday</b>.<br><br>
+          Orders placed on <b>Thursday</b> will be delivered on <b>Friday</b>.<br><br>
+          Orders placed on <b>Friday</b> will be delivered the following week.<br><br>
+          For special orders, please contact us first.
+        </p>
+      `,
+      confirmButtonText: "Got it!",
+      width: 500,
+      padding: "1.5rem",
+      showCloseButton: true,
+    });
+  }, []);
+
+  useEffect(() => {
     const checkMobile = () => setIsMobile(window.innerWidth < 640);
     checkMobile();
     window.addEventListener("resize", checkMobile);
@@ -73,6 +95,9 @@ export default function Hero() {
 
   return (
     <div className="relative w-full h-screen overflow-hidden">
+      <div className="relative w-full h-screen overflow-hidden">
+        {/* Tu contenido de Hero */}
+      </div>
       {/* Fondo */}
       <div
         className="absolute inset-0 bg-no-repeat bg-cover bg-center will-change-transform"

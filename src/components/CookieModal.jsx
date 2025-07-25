@@ -2,27 +2,36 @@
 
 import { useEffect, useState } from "react";
 
-import { useCart } from "@/context/CartContext"; // 👈 Importa tu contexto
+import { useCart } from "@/context/CartContext";
 
 export default function CookieModal({ cookie, onClose }) {
   const [current, setCurrent] = useState(0);
   const [quantity, setQuantity] = useState(1);
-  const { addToCart } = useCart(); // 👈 Hook del contexto
+  const { addToCart } = useCart();
 
   useEffect(() => {
+    // Carousel
     const interval = setInterval(() => {
       setCurrent((prev) => (prev + 1) % cookie.images.length);
     }, 4000);
     return () => clearInterval(interval);
   }, [cookie.images.length]);
 
+  useEffect(() => {
+    // Disable scroll when modal opens
+    document.body.style.overflow = "hidden";
+    return () => {
+      document.body.style.overflow = "";
+    };
+  }, []);
+
   const handleAddToCart = () => {
-    addToCart({ ...cookie, quantity }); // 👈 Agrega al carrito
-    onClose(); // Cierra el modal
+    addToCart({ ...cookie, quantity });
+    onClose();
   };
 
   return (
-    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+    <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50">
       <div className="bg-white rounded-2xl shadow-lg p-4 w-full max-w-md relative">
         <button
           onClick={onClose}
@@ -31,7 +40,6 @@ export default function CookieModal({ cookie, onClose }) {
           &times;
         </button>
 
-        {/* Carrusel */}
         <div className="w-full mb-4 overflow-hidden rounded-xl">
           <img
             src={cookie.images[current]}

@@ -1,8 +1,9 @@
 "use client";
 
+import { useEffect, useState } from "react";
+
 import Swal from "sweetalert2";
 import { useCart } from "@/context/CartContext";
-import { useState } from "react";
 
 export default function CartModal({ onClose }) {
   const { cartItems, removeFromCart, clearCart } = useCart();
@@ -24,6 +25,13 @@ export default function CartModal({ onClose }) {
     (sum, item) => sum + item.price * item.quantity,
     0
   );
+
+  useEffect(() => {
+    document.body.style.overflow = "hidden";
+    return () => {
+      document.body.style.overflow = "";
+    };
+  }, []);
 
   const validate = () => {
     const newErrors = {};
@@ -79,7 +87,7 @@ export default function CartModal({ onClose }) {
     setForm({ ...form, [e.target.name]: e.target.value });
 
   return (
-    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+    <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50">
       <div className="bg-white rounded-2xl shadow-lg p-6 w-full max-w-md relative">
         <button
           onClick={onClose}
