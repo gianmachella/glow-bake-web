@@ -2,7 +2,6 @@ import { Resend } from "resend";
 
 export async function POST(req) {
   const body = await req.json();
-
   const { name, lastName, email, phone, address, deliveryDay, total, items } =
     body;
 
@@ -11,37 +10,51 @@ export async function POST(req) {
     return new Response("Invalid email", { status: 400 });
   }
 
-  const resend = new Resend("re_19Q7Hfn8_M244cDRgMMCpuYmRCju4og25");
+  const resend = new Resend(process.env.RESEND_API_KEY);
 
   const itemList = items
     .map(
-      (item) => `- ${item.quantity} x ${item.name} ($${item.price.toFixed(2)})`
+      (item) =>
+        `<li><strong>${item.quantity}</strong> x ${item.name} - $${item.price.toFixed(2)}</li>`
     )
-    .join("\n");
+    .join("");
 
-  const clientMessage = `
-Thank you for your order, ${name} ${lastName}!
+  const htmlMessage = `
+  <div style="font-family: Arial, sans-serif; max-width: 600px; margin: auto; border: 1px solid #eee; padding: 20px; border-radius: 10px;">
+    <div style="text-align: center;">
+      <img src="https://glowbake.com/images/logo-gb.png" alt="Glow Bake" style="max-width: 200px; margin-bottom: 20px;" />
+      <h2 style="color: #d63384;">Thank you for your order, ${name} ${lastName}!</h2>
+    </div>
 
-Here are your order details:
-----------------------------
-Email: ${email}
-Phone: ${phone}
-Address: ${address}
-Delivery Day: ${deliveryDay}
+    <p>Here are your order details:</p>
+    <hr />
+    <p><strong>Email:</strong> ${email}</p>
+    <p><strong>Phone:</strong> ${phone}</p>
+    <p><strong>Address:</strong> ${address}</p>
+    <p><strong>Delivery Day:</strong> ${deliveryDay}</p>
 
-Your order:
-${itemList}
+    <h3>Your Order:</h3>
+    <ul>${itemList}</ul>
 
-Total: $${total.toFixed(2)}
+    <p><strong>Total:</strong> $${total.toFixed(2)}</p>
 
-----------------------------
- Please send your payment to:
+    <hr />
+    <p>Please send your payment to:</p>
+    <p><strong>Zelle:</strong> 945-400-5808</p>
+    <p><strong>Venmo:</strong> @EleanaMachella</p>
 
-Zelle: 945-400-5808  
-Venmo: @EleanaMachella
+    <p>We'll start preparing your order as soon as we receive the payment.</p>
+    <p style="font-weight: bold; color: #d63384;">Thank you for choosing Glow Bake!</p>
 
-We'll start preparing your order as soon as we receive the payment.
-Thank you for choosing Glow Bake!
+    <div style="margin-top: 30px; text-align: center;">
+      <a href="https://www.instagram.com/glow.bake/" style="margin: 0 10px;">
+        <img src="https://glowbake.com/images/instagram.png" alt="Instagram" style="width: 24px; height: 24px;" />
+      </a>
+      <a href="https://www.facebook.com/profile.php?id=61578248566814" style="margin: 0 10px;">
+        <img src="https://glowbake.com/images/facebook.png" alt="Facebook" style="width: 24px; height: 24px;" />
+      </a>
+    </div>
+  </div>
 `;
 
   const ownerMessage = `
@@ -54,28 +67,24 @@ Address: ${address}
 Delivery Day: ${deliveryDay}
 
 Order:
-${itemList}
+${items.map((item) => `- ${item.quantity} x ${item.name} ($${item.price.toFixed(2)})`).join("\n")}
 
 Total: $${total.toFixed(2)}
 `;
 
   try {
-    // Send to customer
     const clientRes = await resend.emails.send({
       from: "Glow Bake <hello@glowbake.com>",
-
       to: email,
       subject: "Your Glow Bake Order Confirmation",
-      text: clientMessage,
+      html: htmlMessage,
       reply_to: "glowbakesosweet@gmail.com",
     });
 
     console.log("Client email response:", clientRes);
 
-    // Send to owner
     const ownerRes = await resend.emails.send({
       from: "Glow Bake <hello@glowbake.com>",
-
       to: "glowbakesosweet@gmail.com",
       subject: "📦 New Order Received",
       text: ownerMessage,

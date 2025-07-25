@@ -2,8 +2,68 @@
 
 import { useEffect, useState } from "react";
 
+const cookies = [
+  {
+    src: "/images/cookies/cookie-1.png",
+    left: "20%",
+    bottom: "70px",
+    mobileLeft: "10%",
+    mobileBottom: "20px",
+  },
+  {
+    src: "/images/cookies/cookie-2.png",
+    left: "48%",
+    bottom: "140px",
+    mobileLeft: "45%",
+    mobileBottom: "100px",
+  },
+  {
+    src: "/images/cookies/cookie-3.png",
+    left: "60%",
+    bottom: "100px",
+    mobileLeft: "65%",
+    mobileBottom: "60px",
+  },
+  {
+    src: "/images/cookies/cookie-4.png",
+    left: "32%",
+    bottom: "180px",
+    mobileLeft: "30%",
+    mobileBottom: "110px",
+  },
+  {
+    src: "/images/cookies/cookie-5.png",
+    left: "50%",
+    bottom: "80px",
+    mobileLeft: "50%",
+    mobileBottom: "40px",
+  },
+  {
+    src: "/images/cookies/cookie-6.png",
+    left: "30%",
+    bottom: "70px",
+    mobileLeft: "20%",
+    mobileBottom: "30px",
+  },
+  {
+    src: "/images/cookies/cookie-7.png",
+    left: "40%",
+    bottom: "70px",
+    mobileLeft: "35%",
+    mobileBottom: "30px",
+  },
+];
+
 export default function Hero() {
   const [offsetY, setOffsetY] = useState(0);
+  const [isMobile, setIsMobile] = useState(false);
+
+  useEffect(() => {
+    const checkMobile = () => setIsMobile(window.innerWidth < 640);
+    checkMobile();
+    window.addEventListener("resize", checkMobile);
+    return () => window.removeEventListener("resize", checkMobile);
+  }, []);
 
   useEffect(() => {
     const handleScroll = () => setOffsetY(window.scrollY);
@@ -22,7 +82,7 @@ export default function Hero() {
         }}
       />
 
-      {/* Cesta */}
+      {/* Cesta Back */}
       <div
         className="absolute bottom-0 w-full flex justify-center z-10"
         style={{
@@ -30,15 +90,53 @@ export default function Hero() {
         }}
       >
         <img
-          src="/images/banners/cookies-basket.png"
-          alt="Cookies Basket"
+          src="/images/basket-back.png"
+          alt="Basket Back"
+          className="w-[500px] sm:w-[700px] md:w-[800px] lg:w-[1200px] object-contain max-w-none"
+        />
+      </div>
+
+      {/* Galletas */}
+      {cookies.map((cookie, i) => {
+        const baseSize = isMobile ? 160 : i === 3 ? 350 : 350;
+        const extraBottom = isMobile ? -30 : 0;
+
+        return (
+          <img
+            key={i}
+            src={cookie.src}
+            alt={`cookie-${i}`}
+            className="absolute object-contain pointer-events-none z-20"
+            style={{
+              left: isMobile ? cookie.mobileLeft : cookie.left,
+              bottom: isMobile ? cookie.mobileBottom : cookie.bottom,
+              width: `${baseSize}px`,
+              transform: `translateY(-${offsetY * 0.4}px) rotate(${
+                offsetY * 0.1 * (i % 2 === 0 ? 1 : -1)
+              }deg)`,
+              transition: "transform 0.1s ease-out",
+            }}
+          />
+        );
+      })}
+
+      {/* Cesta Front */}
+      <div
+        className="absolute bottom-0 w-full flex justify-center z-30"
+        style={{
+          transform: `translateY(${offsetY * 0.6}px)`,
+        }}
+      >
+        <img
+          src="/images/basket-front.png"
+          alt="Basket Front"
           className="w-[500px] sm:w-[700px] md:w-[800px] lg:w-[1200px] object-contain max-w-none"
         />
       </div>
 
       {/* Logo Glow Bake */}
       <div
-        className="absolute inset-0 flex items-start justify-center pt-50 sm:pt-20 z-20"
+        className="absolute inset-0 flex items-start justify-center pt-20 z-40"
         style={{
           transform: `translateY(${offsetY * 0.4}px)`,
         }}
