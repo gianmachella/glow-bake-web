@@ -7,8 +7,8 @@ import Swal from "sweetalert2";
 const cookies = [
   {
     src: "/images/cookies/cookie-1.png",
-    left: "20%",
-    bottom: "70px",
+    left: "22%",
+    bottom: "180px",
     mobileLeft: "10%",
     mobileBottom: "20px",
   },
@@ -27,11 +27,18 @@ const cookies = [
     mobileBottom: "60px",
   },
   {
+    src: "/images/cookies/cookie-8.png",
+    left: "20%",
+    bottom: "70px",
+    mobileLeft: "1%",
+    mobileBottom: "50px",
+  },
+  {
     src: "/images/cookies/cookie-4.png",
     left: "32%",
     bottom: "180px",
-    mobileLeft: "30%",
-    mobileBottom: "110px",
+    mobileLeft: "15%",
+    mobileBottom: "80px",
   },
   {
     src: "/images/cookies/cookie-5.png",

@@ -70,7 +70,7 @@ const cookies = [
   },
   {
     id: "birthdayChoco",
-    name: "Birthday Cake Chocolate",
+    name: "Birthday Cake Chocolate Cookie",
     price: 6.5,
     image: "/images/cookies/birthdayCakeChoco.png",
     images: [
@@ -79,6 +79,28 @@ const cookies = [
     ],
     description:
       "Crispy outside, gooey inside – a bold NYC-style classic packed with chunky chocolate dreams.",
+  },
+  {
+    id: "penautbutter",
+    name: "Peanut Butter & Jelly Cookie",
+    price: 7,
+    image: "/images/cookies/penautbutterjelly.png",
+    images: [
+      "/images/cookies/penautbutterjelly.png",
+      "/images/cookies/penautbutter-cut.png",
+    ],
+    new: true,
+    description: "Your childhood sandwich, reimagined as a cookie.",
+  },
+  {
+    id: "big-box",
+    name: "Big Box of Cookies",
+    price: 49,
+    image: "/images/cookies/bigbox.png",
+    images: ["/images/cookies/bigbox.png"],
+    new: true,
+    description:
+      "A cookie lover’s dream! 🍪 A deluxe box with 8 cookies, one of each flavor — perfect for sharing, gifting, or treating yourself like royalty.",
   },
 ];
 

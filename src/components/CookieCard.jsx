@@ -19,9 +19,18 @@ export default function CookieCard({ cookie, onClick, index }) {
       initial={{ opacity: 0, y: 20 }}
       animate={controls}
       transition={{ duration: 1.2, delay: index * 0.4 }}
-      className="cursor-pointer bg-white p-4 rounded-lg shadow-md hover:shadow-lg transition-transform hover:scale-105"
+      className="relative cursor-pointer bg-white p-4 rounded-lg shadow-md hover:shadow-lg transition-transform hover:scale-105"
       onClick={onClick}
     >
+      {/* NEW badge */}
+      {cookie.new && (
+        <img
+          src="/images/cookies/new.png"
+          alt="New"
+          className="absolute -top-8 -left-8 w-30 h-30 z-10"
+        />
+      )}
+
       <img
         src={cookie.image}
         alt={cookie.name}
