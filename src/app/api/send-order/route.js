@@ -14,13 +14,20 @@ export async function POST(req) {
 
   const itemList = items
     .map((item) => {
-      const flavor =
-        item.id === "minicookies" && item.miniFlavor
-          ? ` <em>(Flavor: ${item.miniFlavor})</em>`
+      const flavorList =
+        item.flavors && Object.keys(item.flavors).length > 0
+          ? `<ul style="margin: 4px 0 10px 0; padding-left: 1em; font-size: 14px;">
+            ${Object.entries(item.flavors)
+              .filter(([_, qty]) => qty > 0)
+              .map(([flavor, qty]) => `<li>${flavor}: ${qty}</li>`)
+              .join("")}
+          </ul>`
           : "";
-      return `<li><strong>${item.quantity}</strong> x ${item.name}${flavor} - $${item.price.toFixed(
-        2
-      )}</li>`;
+
+      return `<li style="margin-bottom: 10px;">
+              <strong>${item.quantity}</strong> x ${item.name} - $${item.price.toFixed(2)}
+              ${flavorList}
+            </li>`;
     })
     .join("");
 
@@ -74,16 +81,18 @@ Delivery Day: ${deliveryDay}
 Order:
 ${items
   .map((item) => {
-    const flavor =
-      item.id === "minicookies" && item.miniFlavor
-        ? ` (Flavor: ${item.miniFlavor})`
+    const flavors =
+      item.flavors && Object.keys(item.flavors).length > 0
+        ? Object.entries(item.flavors)
+            .filter(([_, qty]) => qty > 0)
+            .map(([flavor, qty]) => `    - ${flavor}: ${qty}`)
+            .join("\n")
         : "";
-    return `- ${item.quantity} x ${item.name}${flavor} ($${item.price.toFixed(
-      2
-    )})`;
+    return `- ${item.quantity} x ${item.name} ($${item.price.toFixed(2)})${
+      flavors ? "\n" + flavors : ""
+    }`;
   })
   .join("\n")}
-
 Total: $${total.toFixed(2)}
 `;
 

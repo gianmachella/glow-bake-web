@@ -121,6 +121,18 @@ export default function CartModal({ onClose }) {
                           Flavor: {item.miniFlavor}
                         </span>
                       )}
+                      {item.flavors && (
+                        <ul className="text-xs text-gray-600 mt-1 ml-2 list-disc list-inside">
+                          {Object.entries(item.flavors).map(
+                            ([flavor, count]) =>
+                              count > 0 && (
+                                <li key={flavor}>
+                                  {flavor}: {count}
+                                </li>
+                              )
+                          )}
+                        </ul>
+                      )}
                     </p>
                     <p className="text-xs text-gray-600">
                       {item.quantity} × ${item.price.toFixed(2)}
