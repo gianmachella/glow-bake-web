@@ -70,7 +70,7 @@ export async function POST(req) {
 `;
 
   const ownerMessage = `
-New order received!
+New order received! from ${name}
 
 Customer: ${name} ${lastName}  
 Email: ${email}  
