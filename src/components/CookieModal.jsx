@@ -17,7 +17,7 @@ export default function CookieModal({ cookie, onClose }) {
   const [selectedOption, setSelectedOption] = useState("custom");
   const { addToCart } = useCart();
 
-  const FLAVORS = ["smores", "nutella", "choco chips", "mms"];
+  const FLAVORS = ["SMores", "B-day Cake", "Choco-Chips", "MMs"];
 
   useEffect(() => {
     const interval = setInterval(() => {

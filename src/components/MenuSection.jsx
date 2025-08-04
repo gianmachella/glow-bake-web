@@ -111,7 +111,7 @@ const cookies = [
     new: true,
     description:
       "A cookie lover’s dream! 🍪 A deluxe box with 8 cookies, one of each flavor — perfect for sharing, gifting, or treating yourself like royalty.",
-    flavors: ["S’mores", "Nutella", "Choco Chips", "M&Ms"],
+    flavors: ["S’mores", "Birthday Cake", "Choco Chips", "M&Ms"],
   },
 ];
 

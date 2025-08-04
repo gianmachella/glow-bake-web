@@ -70,7 +70,7 @@ export async function POST(req) {
 `;
 
   const ownerMessage = `
-New order received! from ${name}
+New order received!
 
 Customer: ${name} ${lastName}  
 Email: ${email}  
@@ -110,7 +110,7 @@ Total: $${total.toFixed(2)}
     const ownerRes = await resend.emails.send({
       from: "Glow Bake <hello@glowbake.com>",
       to: "glowbakesosweet@gmail.com",
-      subject: "📦 New Order Received",
+      subject: `📦 New Order Received - ${name} `,
       text: ownerMessage,
       reply_to: "glowbakesosweet@gmail.com",
     });
