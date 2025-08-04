@@ -93,6 +93,16 @@ const cookies = [
     description: "Your childhood sandwich, reimagined as a cookie.",
   },
   {
+    id: "minicookies",
+    name: "Mini Cookie's Box",
+    price: 25,
+    image: "/images/cookies/mini-1.png",
+    images: ["/images/cookies/mini-1.png", "/images/cookies/mini-2.png"],
+    new: true,
+    description:
+      "12 bite-sized cookies packed with flavor. Perfect for lunch, sharing, or a sweet pick-me-up. ",
+  },
+  {
     id: "big-box",
     name: "Big Box of Cookies",
     price: 49,

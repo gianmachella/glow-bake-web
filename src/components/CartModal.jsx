@@ -116,6 +116,11 @@ export default function CartModal({ onClose }) {
                   <div className="flex-1">
                     <p className="font-semibold text-sm text-gray-800">
                       {item.name}
+                      {item.id === "minicookies" && item.miniFlavor && (
+                        <span className="block text-xs font-normal text-gray-500">
+                          Flavor: {item.miniFlavor}
+                        </span>
+                      )}
                     </p>
                     <p className="text-xs text-gray-600">
                       {item.quantity} × ${item.price.toFixed(2)}
@@ -134,13 +139,20 @@ export default function CartModal({ onClose }) {
                 ${total.toFixed(2)}
               </span>
             </div>
-
-            <button
-              onClick={() => setShowForm(true)}
-              className="mt-5 w-full bg-pink-500 hover:bg-pink-600 text-white text-sm font-semibold py-2 rounded-full"
-            >
-              Go to Checkout
-            </button>
+            <div className="flex justify-between items-center">
+              <button
+                onClick={() => setShowForm(true)}
+                className="m-5 w-full bg-pink-500 hover:bg-pink-600 text-white text-sm font-semibold py-2 rounded-full"
+              >
+                Go to Checkout
+              </button>
+              <button
+                onClick={clearCart}
+                className="m-5 w-full bg-pink-500 hover:bg-pink-600 text-white text-sm font-semibold py-2 rounded-full"
+              >
+                Empty Cart
+              </button>
+            </div>
           </>
         ) : (
           <>

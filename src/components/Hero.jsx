@@ -68,10 +68,13 @@ export default function Hero() {
   const [isMobile, setIsMobile] = useState(false);
 
   useEffect(() => {
-    Swal.fire({
-      title:
-        '<img src="/images/banners/Glow Bake.png" alt="Glow Bake Logo" style="max-width: 200px; margin-bottom: 1rem;" />',
-      html: `
+    const shown = localStorage.getItem("welcomeModalShown");
+
+    if (!shown) {
+      Swal.fire({
+        title:
+          '<img src="/images/banners/Glow Bake.png" alt="Glow Bake Logo" style="max-width: 200px; margin-bottom: 1rem;" />',
+        html: `
         <h2 style="margin-bottom: 0.5rem;">Remember!</h2>
         <p style="text-align: left;">
           Orders are accepted from <b>Monday to Wednesday</b> for delivery on <b>Thursday and Friday</b>.<br><br>
@@ -80,11 +83,14 @@ export default function Hero() {
           For special orders, please contact us first.
         </p>
       `,
-      confirmButtonText: "Got it!",
-      width: 500,
-      padding: "1.5rem",
-      showCloseButton: true,
-    });
+        confirmButtonText: "Got it!",
+        width: 500,
+        padding: "1.5rem",
+        showCloseButton: true,
+      });
+
+      localStorage.setItem("welcomeModalShown", "true");
+    }
   }, []);
 
   useEffect(() => {

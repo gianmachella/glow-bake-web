@@ -13,10 +13,15 @@ export async function POST(req) {
   const resend = new Resend("re_19Q7Hfn8_M244cDRgMMCpuYmRCju4og25");
 
   const itemList = items
-    .map(
-      (item) =>
-        `<li><strong>${item.quantity}</strong> x ${item.name} - $${item.price.toFixed(2)}</li>`
-    )
+    .map((item) => {
+      const flavor =
+        item.id === "minicookies" && item.miniFlavor
+          ? ` <em>(Flavor: ${item.miniFlavor})</em>`
+          : "";
+      return `<li><strong>${item.quantity}</strong> x ${item.name}${flavor} - $${item.price.toFixed(
+        2
+      )}</li>`;
+    })
     .join("");
 
   const htmlMessage = `
@@ -67,7 +72,17 @@ Address: ${address}
 Delivery Day: ${deliveryDay}
 
 Order:
-${items.map((item) => `- ${item.quantity} x ${item.name} ($${item.price.toFixed(2)})`).join("\n")}
+${items
+  .map((item) => {
+    const flavor =
+      item.id === "minicookies" && item.miniFlavor
+        ? ` (Flavor: ${item.miniFlavor})`
+        : "";
+    return `- ${item.quantity} x ${item.name}${flavor} ($${item.price.toFixed(
+      2
+    )})`;
+  })
+  .join("\n")}
 
 Total: $${total.toFixed(2)}
 `;

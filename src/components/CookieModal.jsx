@@ -8,6 +8,9 @@ export default function CookieModal({ cookie, onClose }) {
   const [current, setCurrent] = useState(0);
   const [quantity, setQuantity] = useState(1);
   const { addToCart } = useCart();
+  const [miniFlavor, setMiniFlavor] = useState("");
+
+  const miniOptions = ["s’mores", "Nutella", "Choco Chips", "M&Ms"];
 
   useEffect(() => {
     // Carousel
@@ -26,7 +29,8 @@ export default function CookieModal({ cookie, onClose }) {
   }, []);
 
   const handleAddToCart = () => {
-    addToCart({ ...cookie, quantity });
+    if (cookie.id === "minicookies" && !miniFlavor) return;
+    addToCart({ ...cookie, quantity, miniFlavor });
     onClose();
   };
 
@@ -68,6 +72,36 @@ export default function CookieModal({ cookie, onClose }) {
         </div>
 
         <div className="flex items-center justify-between mt-4">
+          {cookie.id === "minicookies" && (
+            <div className="mb-4">
+              <p className="text-sm font-semibold text-gray-700 mb-2">
+                Choose your flavor:
+              </p>
+              <div className="space-y-2">
+                {miniOptions.map((flavor) => (
+                  <label
+                    key={flavor}
+                    className="flex items-center gap-2 text-sm text-gray-800"
+                  >
+                    <input
+                      type="radio"
+                      name="miniFlavor"
+                      value={flavor}
+                      checked={miniFlavor === flavor}
+                      onChange={(e) => setMiniFlavor(e.target.value)}
+                      className="accent-pink-500"
+                    />
+                    {flavor}
+                  </label>
+                ))}
+              </div>
+              {cookie.id === "minicookies" && !miniFlavor && (
+                <p className="text-xs text-red-600 mt-1">
+                  Please select a flavor.
+                </p>
+              )}
+            </div>
+          )}
           <button
             onClick={handleAddToCart}
             className="bg-pink-500 hover:bg-pink-600 text-white px-6 py-2 rounded-full font-medium text-sm"
