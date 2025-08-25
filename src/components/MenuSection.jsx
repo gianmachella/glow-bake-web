@@ -103,7 +103,7 @@ const cookies = [
   },
   {
     id: "cookie & cream",
-    name: "Cookie & and Cream",
+    name: "Cookie & Cream",
     price: 6,
     image: "/images/cookies/cookiecream.png",
     images: ["/images/cookies/cookiecream-cut.png"],
