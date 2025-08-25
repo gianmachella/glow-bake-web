@@ -89,25 +89,36 @@ const cookies = [
       "/images/cookies/penautbutterjelly.png",
       "/images/cookies/penautbutter-cut.png",
     ],
-    new: true,
     description: "Your childhood sandwich, reimagined as a cookie.",
   },
-  {
-    id: "minicookies",
-    name: "Mini Cookie's Box",
-    price: 25,
-    image: "/images/cookies/mini-1.png",
-    images: ["/images/cookies/mini-1.png", "/images/cookies/mini-2.png"],
-    new: true,
-    description:
-      "12 bite-sized cookies packed with flavor. Perfect for lunch, sharing, or a sweet pick-me-up. ",
-  },
+
   {
     id: "big-box",
     name: "Big Box of Cookies",
     price: 49,
     image: "/images/cookies/bigbox.png",
     images: ["/images/cookies/bigbox.png"],
+    description:
+      "A cookie lover’s dream! 🍪 A deluxe box with 8 cookies, one of each flavor — perfect for sharing, gifting, or treating yourself like royalty.",
+    flavors: ["S’mores", "Birthday Cake", "Choco Chips", "M&Ms"],
+  },
+  {
+    id: "cookie & cream",
+    name: "Cookie & and Cream",
+    price: 6,
+    image: "/images/cookiecream.png",
+    images: ["/images/cookies/cookiecream-cut.png"],
+    new: true,
+    description:
+      "A cookie lover’s dream! 🍪 A deluxe box with 8 cookies, one of each flavor — perfect for sharing, gifting, or treating yourself like royalty.",
+    flavors: ["S’mores", "Birthday Cake", "Choco Chips", "M&Ms"],
+  },
+  {
+    id: "luki cookie",
+    name: '"Luki" Cookie (M&Ms)',
+    price: 6,
+    image: "/images/cookies/mms.png",
+    images: ["/images/cookies/mms-cut.png"],
     new: true,
     description:
       "A cookie lover’s dream! 🍪 A deluxe box with 8 cookies, one of each flavor — perfect for sharing, gifting, or treating yourself like royalty.",
