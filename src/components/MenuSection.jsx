@@ -100,18 +100,16 @@ const cookies = [
     images: ["/images/cookies/bigbox.png"],
     description:
       "A cookie lover’s dream! 🍪 A deluxe box with 8 cookies, one of each flavor — perfect for sharing, gifting, or treating yourself like royalty.",
-    flavors: ["S’mores", "Birthday Cake", "Choco Chips", "M&Ms"],
   },
   {
     id: "cookie & cream",
     name: "Cookie & and Cream",
     price: 6,
-    image: "/images/cookiecream.png",
+    image: "/images/cookies/cookiecream.png",
     images: ["/images/cookies/cookiecream-cut.png"],
     new: true,
     description:
-      "A cookie lover’s dream! 🍪 A deluxe box with 8 cookies, one of each flavor — perfect for sharing, gifting, or treating yourself like royalty.",
-    flavors: ["S’mores", "Birthday Cake", "Choco Chips", "M&Ms"],
+      "A soft, chewy cookie packed with crushed Oreos and creamy white chocolate chips. Cookies & cream, but make it dreamy. 😍🍪",
   },
   {
     id: "luki cookie",
@@ -121,8 +119,7 @@ const cookies = [
     images: ["/images/cookies/mms-cut.png"],
     new: true,
     description:
-      "A cookie lover’s dream! 🍪 A deluxe box with 8 cookies, one of each flavor — perfect for sharing, gifting, or treating yourself like royalty.",
-    flavors: ["S’mores", "Birthday Cake", "Choco Chips", "M&Ms"],
+      "The Luki Cookie is inspired by my son Luca’s favorite treat – soft, chewy, and packed with colorful M&Ms for a burst of joy in every bite. Made with love, approved by kids (and grown-ups too!).",
   },
 ];
 
