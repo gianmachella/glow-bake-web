@@ -104,9 +104,12 @@ const cookies = [
   {
     id: "cookie & cream",
     name: "Cookie & Cream",
-    price: 6,
+    price: 7,
     image: "/images/cookies/cookiecream.png",
-    images: ["/images/cookies/cookiecream-cut.png"],
+    images: [
+      "/images/cookies/cookiecream.png",
+      "/images/cookies/cookiecream-cut.png",
+    ],
     new: true,
     description:
       "A soft, chewy cookie packed with crushed Oreos and creamy white chocolate chips. Cookies & cream, but make it dreamy. 😍🍪",
@@ -116,7 +119,7 @@ const cookies = [
     name: '"Luki" Cookie (M&Ms)',
     price: 6,
     image: "/images/cookies/mms.png",
-    images: ["/images/cookies/mms-cut.png"],
+    images: ["/images/cookies/mms.png", "/images/cookies/mms-cut.png"],
     new: true,
     description:
       "The Luki Cookie is inspired by my son Luca’s favorite treat – soft, chewy, and packed with colorful M&Ms for a burst of joy in every bite. Made with love, approved by kids (and grown-ups too!).",

@@ -27,7 +27,7 @@ export default function CookieCard({ cookie, onClick, index }) {
         <img
           src="/images/cookies/new.png"
           alt="New"
-          className="absolute -top-8 -left-8 w-30 h-30 z-10 -rotate-12"
+          className="absolute -top-8 -left-8 w-30 h-30 z-10 -rotate-20"
         />
       )}
 
