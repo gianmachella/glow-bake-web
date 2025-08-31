@@ -2,15 +2,24 @@ import { Resend } from "resend";
 
 export async function POST(req) {
   const body = await req.json();
-  const { name, lastName, email, phone, address, deliveryDay, total, items } =
-    body;
+  const {
+    name,
+    lastName,
+    email,
+    phone,
+    address,
+    deliveryDay,
+    notes,
+    total,
+    items,
+  } = body;
 
   if (!email || !email.includes("@")) {
     console.error("Invalid email:", email);
     return new Response("Invalid email", { status: 400 });
   }
 
-  const resend = new Resend("re_19Q7Hfn8_M244cDRgMMCpuYmRCju4og25");
+  const resend = new Resend(process.env.RESEND_API_KEY); // 👈 usa env var, no hardcode
 
   const itemList = items
     .map((item) => {
@@ -44,6 +53,7 @@ export async function POST(req) {
     <p><strong>Phone:</strong> ${phone}</p>
     <p><strong>Address:</strong> ${address}</p>
     <p><strong>Delivery Day:</strong> ${deliveryDay}</p>
+    <p><strong>Notes:</strong> ${notes || "None"}</p>
 
     <h3>Your Order:</h3>
     <ul>${itemList}</ul>
@@ -76,7 +86,8 @@ Customer: ${name} ${lastName}
 Email: ${email}  
 Phone: ${phone}  
 Address: ${address}  
-Delivery Day: ${deliveryDay}
+Delivery Day: ${deliveryDay}  
+Notes: ${notes || "None"}
 
 Order:
 ${items
@@ -97,7 +108,7 @@ Total: $${total.toFixed(2)}
 `;
 
   try {
-    const clientRes = await resend.emails.send({
+    await resend.emails.send({
       from: "Glow Bake <hello@glowbake.com>",
       to: email,
       subject: "Your Glow Bake Order Confirmation",
@@ -105,17 +116,13 @@ Total: $${total.toFixed(2)}
       reply_to: "glowbakesosweet@gmail.com",
     });
 
-    console.log("Client email response:", clientRes);
-
-    const ownerRes = await resend.emails.send({
+    await resend.emails.send({
       from: "Glow Bake <hello@glowbake.com>",
       to: "glowbakesosweet@gmail.com",
       subject: `📦 New Order Received - ${name} `,
       text: ownerMessage,
       reply_to: "glowbakesosweet@gmail.com",
     });
-
-    console.log("Owner email response:", ownerRes);
 
     return new Response("Emails sent!", { status: 200 });
   } catch (err) {

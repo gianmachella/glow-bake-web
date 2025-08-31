@@ -17,7 +17,6 @@ export default function Home() {
       <Testimonials />
       <ParallaxBanner image="/images/banners/banner-3.png" position="left" />
       <ContactSection />
-      <Footer />
     </main>
   );
 }

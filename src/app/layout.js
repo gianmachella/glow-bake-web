@@ -1,6 +1,7 @@
 import "./globals.css";
 
 import { CartProvider } from "@/context/CartContext";
+import Footer from "@/components/Footer";
 import { Great_Vibes } from "next/font/google";
 import { Inter } from "next/font/google";
 import Navbar from "@/components/Navbar";
@@ -39,6 +40,7 @@ export default function RootLayout({ children }) {
         <CartProvider>
           <Navbar />
           {children}
+          <Footer />
         </CartProvider>
       </body>
     </html>
