@@ -177,7 +177,7 @@ export default function CookieDetailPage({ params }) {
             >
               &times;
             </button>
-            <h2 className="text-lg font-bold text-pink-600 mb-4">
+            <h2 className="text-lg font-bold text-pink-600 mb-4 underline">
               <a
                 href="https://maps.apple.com/?address=5614%20Mystic%20Glade%20Way,%20Princeton,%20TX%2075407"
                 target="_blank"

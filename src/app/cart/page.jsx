@@ -7,7 +7,9 @@ import Swal from "sweetalert2";
 import { useCart } from "@/context/CartContext";
 
 export default function CartPage() {
-  const { cartItems, clearCart, addToCart } = useCart();
+  const { cartItems, clearCart, increment, decrement, deleteFromCart } =
+    useCart();
+
   const [form, setForm] = useState({
     name: "",
     lastName: "",
@@ -33,7 +35,7 @@ export default function CartPage() {
   // 👉 función para calcular la próxima fecha disponible
   const getNextDate = (targetDay) => {
     const today = new Date();
-    const day = today.getDay(); // 0=Dom ... 6=Sab
+    const day = today.getDay();
     const result = new Date(today);
 
     let daysToAdd = (targetDay + 7 - day) % 7;
@@ -61,7 +63,6 @@ export default function CartPage() {
     if (today === 5 && hours >= 0) disableThursday = true;
     if (today === 5 && hours >= 9) disableFriday = true;
 
-    // 👉 sábado y domingo: habilitar ambos para la nueva semana
     if (today === 6 || today === 0) {
       disableThursday = false;
       disableFriday = false;
@@ -80,15 +81,17 @@ export default function CartPage() {
         text: "The 'Other' option is only available for catering or special orders. Please contact us directly for details.",
         confirmButtonColor: "#ec4899",
       });
-      setNextAvailableDate("Contact us to schedule");
+      setNextAvailableDate(
+        `Contact us to schedule <br/> Only text message : (945) 400 5808`
+      );
     }
 
     if (name === "deliveryDay" && value === "Thursday") {
-      setNextAvailableDate(getNextDate(4)); // 4 = Jueves
+      setNextAvailableDate(getNextDate(4));
     }
 
     if (name === "deliveryDay" && value === "Friday") {
-      setNextAvailableDate(getNextDate(5)); // 5 = Viernes
+      setNextAvailableDate(getNextDate(5));
     }
 
     setForm({ ...form, [name]: value });
@@ -147,7 +150,6 @@ export default function CartPage() {
           </p>
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-3 gap-10">
-            {/* Left side */}
             <div className="md:col-span-2 space-y-6">
               {cartItems.map((item, idx) => (
                 <div
@@ -161,20 +163,21 @@ export default function CartPage() {
                       className="w-24 h-24 object-cover rounded-lg border"
                     />
                     <div className="flex-1">
-                      <h3 className="font-semibold text-gray-900">
-                        {item.name}
-                      </h3>
+                      <Link href={`/cookies/${encodeURIComponent(item.id)}`}>
+                        <h3 className="font-semibold text-gray-900">
+                          {item.name}
+                        </h3>
+                      </Link>
                       <p className="text-sm text-gray-700">
                         {item.quantity} × ${item.price.toFixed(2)}
                       </p>
                     </div>
                   </div>
+
                   <div className="flex flex-col items-center md:flex-row md:items-center md:gap-4 w-full md:w-auto">
                     <div className="flex items-center gap-2 mb-2 md:mb-0">
                       <button
-                        onClick={() =>
-                          addToCart({ ...item, quantity: item.quantity - 1 })
-                        }
+                        onClick={() => decrement(item.id)}
                         disabled={item.quantity <= 1}
                         className="w-8 h-8 rounded-full bg-gray-300 hover:bg-pink-500 hover:text-white text-gray-800"
                       >
@@ -184,9 +187,7 @@ export default function CartPage() {
                         {item.quantity}
                       </span>
                       <button
-                        onClick={() =>
-                          addToCart({ ...item, quantity: item.quantity + 1 })
-                        }
+                        onClick={() => increment(item.id)}
                         className="w-8 h-8 rounded-full bg-gray-300 hover:bg-pink-500 hover:text-white text-gray-800"
                       >
                         +
@@ -195,12 +196,21 @@ export default function CartPage() {
                     <div className="text-center md:text-right font-bold text-pink-600 w-full md:w-20">
                       ${(item.price * item.quantity).toFixed(2)}
                     </div>
+                    <button
+                      onClick={() => deleteFromCart(item.id)}
+                      className="text-xs text-red-500 hover:underline mt-2 md:mt-0"
+                    >
+                      Remove
+                    </button>
                   </div>
                 </div>
               ))}
+              <Link href="/#menu" className="text-pink-600 underline">
+                Continue shopping
+              </Link>
             </div>
 
-            {/* Right side */}
+            {/* Right side - Form */}
             <div className="bg-white border rounded-xl p-6 h-fit shadow-sm">
               <h2 className="text-lg font-bold mb-4 text-gray-900">
                 Order Summary
@@ -222,11 +232,11 @@ export default function CartPage() {
               </h3>
               <div className="space-y-3">
                 {[
-                  { name: "name", placeholder: "First Name" },
-                  { name: "lastName", placeholder: "Last Name" },
-                  { name: "email", placeholder: "Email", type: "email" },
-                  { name: "phone", placeholder: "Phone", type: "tel" },
-                  { name: "address", placeholder: "Shipping Address" },
+                  { name: "name", placeholder: "* First Name" },
+                  { name: "lastName", placeholder: "* Last Name" },
+                  { name: "email", placeholder: "* Email", type: "email" },
+                  { name: "phone", placeholder: "* Phone", type: "tel" },
+                  { name: "address", placeholder: "* Shipping Address" },
                 ].map(({ name, placeholder, type = "text" }) => (
                   <div key={name} className="flex flex-col">
                     <input
@@ -242,7 +252,9 @@ export default function CartPage() {
                     </p>
                   </div>
                 ))}
-
+                <p className="text-xs text-gray-400 mt-1 h-4">
+                  * Required fields
+                </p>
                 {/* Notes */}
                 <div className="flex flex-col">
                   <textarea
@@ -265,7 +277,9 @@ export default function CartPage() {
                   {["Thursday", "Friday", "Other"].map((day) => (
                     <label
                       key={day}
-                      className={`text-sm flex items-center gap-1 ${disabledDays[day] ? "text-gray-400" : "text-gray-800"}`}
+                      className={`text-sm flex items-center gap-1 ${
+                        disabledDays[day] ? "text-gray-400" : "text-gray-800"
+                      }`}
                     >
                       <input
                         type="radio"
@@ -280,12 +294,30 @@ export default function CartPage() {
                   ))}
                 </div>
                 {nextAvailableDate && (
-                  <p className="text-xs text-gray-500 mt-2">
-                    {form.deliveryDay === "Other"
-                      ? nextAvailableDate
-                      : `Next available ${form.deliveryDay}: ${nextAvailableDate}`}
-                  </p>
+                  <div className="mt-2">
+                    {form.deliveryDay === "Other" ? (
+                      <p
+                        className="text-xs text-gray-500"
+                        dangerouslySetInnerHTML={{ __html: nextAvailableDate }}
+                      />
+                    ) : (
+                      <>
+                        <p className="text-xs text-gray-500">
+                          <span className="font-bold">
+                            Next available {form.deliveryDay}:
+                          </span>{" "}
+                          <span className="italic">{nextAvailableDate}</span>
+                        </p>
+                        <p className="text-xs text-gray-500 border border-gray-300 bg-green-50 rounded-lg mt-3 p-3">
+                          Deliveries start at 4:30 PM on the selected day, and
+                          the delivery window may take up to two hours depending
+                          on the number of orders.
+                        </p>
+                      </>
+                    )}
+                  </div>
                 )}
+
                 <p className="text-xs text-red-600 mt-1 h-4">
                   {errors.deliveryDay || ""}
                 </p>

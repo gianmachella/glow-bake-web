@@ -1,6 +1,6 @@
 export const cookies = [
   {
-    id: "smores",
+    id: "1",
     name: "S’MORES COOKIE",
     price: 6,
     image: "/images/cookies/smores.png",
@@ -12,7 +12,7 @@ export const cookies = [
       "Flour, butter, eggs, sugar, marshmallow, chocolate, graham crackers.",
   },
   {
-    id: "pecan",
+    id: "2",
     name: "PECAN PIE COOKIE",
     price: 7,
     image: "/images/cookies/pecanPie.png",
@@ -23,7 +23,7 @@ export const cookies = [
     ingredients: "Flour, butter, eggs, sugar, pecans, vanilla extract.",
   },
   {
-    id: "cinnamon",
+    id: "3",
     name: "CINNAMON ROLLS COOKIE",
     price: 7,
     image: "/images/cookies/cinnamonRoll.png",
@@ -37,7 +37,7 @@ export const cookies = [
     ingredients: "Flour, butter, eggs, sugar, cinnamon, vanilla glaze.",
   },
   {
-    id: "birthday",
+    id: "4",
     name: "BIRTHDAY CAKE COOKIE",
     price: 6,
     image: "/images/cookies/birthdayCake.png",
@@ -51,7 +51,7 @@ export const cookies = [
     ingredients: "Flour, butter, eggs, sugar, sprinkles, vanilla extract.",
   },
   {
-    id: "redVelvet",
+    id: "5",
     name: "RED VELVET COOKIE",
     price: 7,
     image: "/images/cookies/redVelvet.png",
@@ -65,7 +65,7 @@ export const cookies = [
     ingredients: "Flour, cocoa, butter, sugar, eggs, cream cheese.",
   },
   {
-    id: "nutella",
+    id: "6",
     name: "NUTELLA COOKIE",
     price: 6,
     image: "/images/cookies/nutella.png",
@@ -76,7 +76,7 @@ export const cookies = [
     ingredients: "Flour, butter, eggs, sugar, Nutella, hazelnuts.",
   },
   {
-    id: "birthdayChoco",
+    id: "7",
     name: "BIRTHDAY CAKE CHOCOLATE COOKIE",
     price: 6.5,
     image: "/images/cookies/birthdayCakeChoco.png",
@@ -91,7 +91,7 @@ export const cookies = [
       "Flour, butter, cocoa, eggs, sugar, chocolate chunks, sprinkles.",
   },
   {
-    id: "penautbutter",
+    id: "8",
     name: "PEANUT BUTTER & JELLY COOKIE",
     price: 7,
     image: "/images/cookies/penautbutterjelly.png",
@@ -105,7 +105,7 @@ export const cookies = [
     ingredients: "Flour, butter, eggs, sugar, peanut butter, jelly.",
   },
   {
-    id: "big-box",
+    id: "9",
     name: "BIG BOX OF COOKIES",
     price: 49,
     image: "/images/cookies/bigbox.png",
@@ -116,7 +116,7 @@ export const cookies = [
     ingredients: "Variety of cookies. Contains gluten, dairy, nuts, and eggs.",
   },
   {
-    id: "cookie & cream",
+    id: "10",
     name: "COOKIE & CREAM",
     price: 7,
     image: "/images/cookies/cookiecream.png",
@@ -131,7 +131,7 @@ export const cookies = [
     ingredients: "Flour, butter, eggs, sugar, Oreos, white chocolate.",
   },
   {
-    id: "luki cookie",
+    id: "11",
     name: "“LUKI” COOKIE (M&MS)",
     price: 6,
     image: "/images/cookies/mms.png",

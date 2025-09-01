@@ -49,16 +49,19 @@ export default function CookieCard({ cookie, index }) {
 
       {/* Texto a la izquierda */}
       <div className="flex flex-col text-left flex-grow">
-        <Link href={`/cookies/${cookie.id}`}>
+        <Link href={`/cookies/${encodeURIComponent(cookie.id)}`}>
           <h3 className="text-lg font-bold text-pink-600 uppercase hover:underline">
             {cookie.name}
           </h3>
+        </Link>{" "}
+        <Link href={`/cookies/${encodeURIComponent(cookie.id)}`}>
+          <p className="text-gray-500 text-xs mt-1 mb-5 underline">
+            More Details
+          </p>
         </Link>
-
         <p className="text-gray-500 text-sm mt-1">
           {cookie.shortDescription || cookie.description}
         </p>
-
         <p className="text-gray-800 font-semibold text-base mt-2">
           ${cookie.price.toFixed(2)} USD
         </p>
