@@ -9,7 +9,7 @@ export const cookies = [
     description:
       "A cozy campfire classic turned into a cookie! Each bite brings gooey marshmallow, decadent chocolate, and golden graham crunch. It’s soft, chewy, and slightly crispy at the edges. Perfect for anyone who wants the campfire vibes without the smoke. A treat that feels like a hug for your taste buds.",
     ingredients:
-      "Flour, butter, eggs, sugar, marshmallow, chocolate, graham crackers.",
+      "Flour, sugar, butter, eggs, corn starch, salt, baking soda, baking powder, vanilla extract, marshmallow, chocolate.",
   },
   {
     id: "2",
@@ -20,7 +20,8 @@ export const cookies = [
     shortDescription: "Buttery, nutty, irresistibly rich.",
     description:
       "Inspired by the South’s most iconic dessert, this cookie is buttery, nutty, and deeply satisfying. Each bite blends the rich sweetness of pecan pie with the chewiness of a fresh-baked cookie. Sweet, caramelized pecans and a soft center make it an indulgent treat worth savoring.",
-    ingredients: "Flour, butter, eggs, sugar, pecans, vanilla extract.",
+    ingredients:
+      "Flour, sugar, butter, eggs, corn starch, salt, baking soda, baking powder, vanilla extract., pecans, dulce de leche, chocolate.",
   },
   {
     id: "3",
@@ -34,7 +35,8 @@ export const cookies = [
     shortDescription: "Soft, sweet, cinnamon-swirled heaven.",
     description:
       "A cookie that captures the magic of a warm cinnamon roll. Soft and chewy with swirls of cinnamon sugar, finished with a sweet drizzle that makes every bite feel homemade. Perfect for mornings, evenings, and everything in between.",
-    ingredients: "Flour, butter, eggs, sugar, cinnamon, vanilla glaze.",
+    ingredients:
+      "Flour, sugar, butter, eggs, corn starch, salt, baking soda, baking powder, vanilla extract, chocolate, cinnamon, cream cheese",
   },
   {
     id: "4",
@@ -48,7 +50,8 @@ export const cookies = [
     shortDescription: "Vanilla, sprinkles, and pure celebration.",
     description:
       "Bring the party to your taste buds! Sweet vanilla dough filled with colorful sprinkles that pop with joy in every bite. It’s festive, fun, and perfect for celebrating big moments or making an ordinary day feel special.",
-    ingredients: "Flour, butter, eggs, sugar, sprinkles, vanilla extract.",
+    ingredients:
+      "Flour, sugar, butter, eggs, corn starch, salt, baking soda, baking powder, vanilla extract., chocolate, sprinkles",
   },
   {
     id: "5",
@@ -62,7 +65,8 @@ export const cookies = [
     shortDescription: "Velvety, chocolatey, with a creamy twist.",
     description:
       "Classic red velvet transformed into a cookie. Soft, chocolatey richness with a subtle tang, topped with a creamy swirl. Perfect for when you want indulgence with a touch of elegance.",
-    ingredients: "Flour, cocoa, butter, sugar, eggs, cream cheese.",
+    ingredients:
+      "Flour, sugar, butter, eggs, corn starch, salt, baking soda, baking powder, vanilla extract, chocolate, cacao, red food coloring, cream cheese",
   },
   {
     id: "6",
@@ -73,7 +77,8 @@ export const cookies = [
     shortDescription: "Stuffed with smooth chocolate-hazelnut magic.",
     description:
       "A cookie filled with creamy Nutella that melts into every bite. Crispy edges, soft center, and a decadent hazelnut surprise waiting inside. Perfect for chocolate lovers!",
-    ingredients: "Flour, butter, eggs, sugar, Nutella, hazelnuts.",
+    ingredients:
+      "Flour, sugar, butter, eggs, corn starch, salt, baking soda, baking powder, vanilla extract, chocolate, Nutella.",
   },
   {
     id: "7",
@@ -88,7 +93,7 @@ export const cookies = [
     description:
       "A NYC-style chunky cookie with bold chocolate flavor, gooey center, and crunchy edges. Packed with chocolate chunks and colorful sprinkles that make every bite an explosion of flavor.",
     ingredients:
-      "Flour, butter, cocoa, eggs, sugar, chocolate chunks, sprinkles.",
+      "Flour, sugar, butter, eggs, corn starch, salt, baking soda, baking powder, vanilla extract, cacao, chocolate.",
   },
   {
     id: "8",
@@ -102,7 +107,8 @@ export const cookies = [
     shortDescription: "Your childhood sandwich, reimagined.",
     description:
       "A nostalgic twist! Soft peanut butter cookie with a heart of sweet jelly, perfectly balanced between nutty and fruity. A playful treat that takes you back to childhood lunches.",
-    ingredients: "Flour, butter, eggs, sugar, peanut butter, jelly.",
+    ingredients:
+      "Flour, sugar, butter, eggs, corn starch, salt, baking soda, baking powder, vanilla extract, chocolate, peanut butter, strawberry jelly.",
   },
   {
     id: "9",
@@ -113,7 +119,8 @@ export const cookies = [
     shortDescription: "A deluxe box with 8 cookies, one of each flavor.",
     description:
       "The ultimate cookie experience! A deluxe box featuring 8 unique flavors — perfect for sharing with family, gifting to friends, or simply treating yourself like royalty. Each cookie is crafted with love and packed with flavor.",
-    ingredients: "Variety of cookies. Contains gluten, dairy, nuts, and eggs.",
+    ingredients:
+      "Flour, sugar, butter, eggs, corn starch, salt, baking soda, baking powder, vanilla extract, chocolate, cinnamon, cream cheese, marshmallow, Nutella, peanut butter, strawberry jelly, red food coloring, pecans, sprinkles, cacao, dulce de leche, oreos, M&M",
   },
   {
     id: "10",
@@ -128,7 +135,8 @@ export const cookies = [
     description:
       "Soft and chewy with the perfect balance of crushed Oreos and creamy white chocolate chips. Cookies & cream reimagined for those who crave both crunch and smooth sweetness.",
     new: true,
-    ingredients: "Flour, butter, eggs, sugar, Oreos, white chocolate.",
+    ingredients:
+      "Flour, sugar, butter, eggs, corn starch, salt, baking soda, baking powder, vanilla extract, chocolate, oreos.",
   },
   {
     id: "11",
@@ -140,6 +148,7 @@ export const cookies = [
     description:
       "Inspired by my son Luca’s favorite treat! A soft, chewy cookie loaded with colorful M&Ms that burst with joy in every bite. Fun, playful, and made with love.",
     new: true,
-    ingredients: "Flour, butter, eggs, sugar, M&Ms.",
+    ingredients:
+      "Flour, sugar, butter, eggs, corn starch, salt, baking soda, baking powder, vanilla extract, chocolate, M&M.",
   },
 ];
