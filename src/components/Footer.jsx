@@ -4,7 +4,7 @@ export default function Footer() {
       {/* Imagen con transparencia encima del fondo */}
       <div className="absolute inset-0">
         <img
-          src="/images/footer-bg.png" // reemplaza con tu imagen
+          src="/images/footer-bg.png"
           alt="Decorative Overlay"
           className="w-full h-full object-cover opacity-7"
         />
@@ -94,8 +94,21 @@ export default function Footer() {
         </div>
       </div>
 
+      {/* Derechos + crédito de diseño */}
       <div className="relative z-10 mt-10 text-center text-xs text-gray-500">
         © {new Date().getFullYear()} Glow Bake. All rights reserved.
+        <br />
+        <span>
+          Designed by{" "}
+          <a
+            href="https://www.linkedin.com/in/gian-machella-1b9a90187/"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="text-pink-600 hover:underline"
+          >
+            Gian Machella
+          </a>
+        </span>
       </div>
     </footer>
   );
