@@ -4,8 +4,7 @@ const prisma = new PrismaClient();
 
 export async function GET() {
   try {
-    // 👀 prueba básica: contar clientes
-    const count = await prisma.customer.count();
+    const count = await prisma.customer.count(); // 👈 prueba básica
     return new Response(JSON.stringify({ ok: true, customers: count }), {
       status: 200,
     });

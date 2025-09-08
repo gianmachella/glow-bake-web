@@ -1,5 +1,6 @@
+// app/api/send-order/route.js
 import { Resend } from "resend";
-import { prisma } from "@/lib/prisma";
+import prisma from "@/lib/prisma";
 
 export async function POST(req) {
   const body = await req.json();
@@ -9,7 +10,7 @@ export async function POST(req) {
     email,
     phone,
     address,
-    deliveryMethod, // 🚨 nuevo: Delivery o Pickup
+    deliveryMethod,
     deliveryDay,
     notes,
     total,
@@ -21,14 +22,18 @@ export async function POST(req) {
     return new Response("Invalid email", { status: 400 });
   }
 
-  // 📦 Guardar en BD (Customer + Sales)
-  let customer = await prisma.customer.findUnique({
-    where: { email },
-  });
-
-  if (!customer) {
-    customer = await prisma.customer.create({
-      data: {
+  // 📦 Guardar en DB
+  try {
+    // 1. Buscar o crear Customer
+    const customer = await prisma.customer.upsert({
+      where: { email },
+      update: {
+        name,
+        lastName,
+        phone,
+        address,
+      },
+      create: {
         name,
         lastName,
         email,
@@ -36,25 +41,24 @@ export async function POST(req) {
         address,
       },
     });
-  } else {
-    customer = await prisma.customer.update({
-      where: { id: customer.id },
-      data: { name, lastName, phone, address },
-    });
+
+    // 2. Guardar cada venta en Sales
+    for (const item of items) {
+      await prisma.sale.create({
+        data: {
+          cookieId: item.id, // 👈 asegúrate que en tu FE mandes `id` de la cookie
+          customerId: customer.id,
+          quantity: item.quantity,
+          total: item.price * item.quantity,
+        },
+      });
+    }
+  } catch (err) {
+    console.error("❌ Error saving order in DB:", err);
+    return new Response("Error saving order", { status: 500 });
   }
 
-  for (const item of items) {
-    await prisma.sale.create({
-      data: {
-        cookieId: item.id, // 👈 asegúrate que cartItems trae `id`
-        customerId: customer.id,
-        quantity: item.quantity,
-        total: item.price * item.quantity,
-      },
-    });
-  }
-
-  // 📨 Correos
+  // 📧 Enviar emails (lo mismo que ya tenías)
   const resend = new Resend(process.env.RESEND_API_KEY);
 
   const itemList = items
@@ -70,9 +74,7 @@ export async function POST(req) {
           : "";
 
       return `<li style="margin-bottom: 10px;">
-                <strong>${item.quantity}</strong> x ${item.name} - $${item.price.toFixed(
-                  2
-                )}
+                <strong>${item.quantity}</strong> x ${item.name} - $${item.price.toFixed(2)}
                 ${flavorList}
               </li>`;
     })
@@ -84,9 +86,6 @@ export async function POST(req) {
         <img src="https://glowbake.com/images/logo-circle.png" alt="Glow Bake" style="max-width: 200px; margin-bottom: 20px;" />
         <h2 style="color: #d63384;">Thank you for your order, ${name} ${lastName}!</h2>
       </div>
-
-      <p>Here are your order details:</p>
-      <hr />
       <p><strong>Email:</strong> ${email}</p>
       <p><strong>Phone:</strong> ${phone}</p>
       <p><strong>Method:</strong> ${deliveryMethod}</p>
@@ -101,28 +100,14 @@ export async function POST(req) {
           : ""
       }</p>
       <p><strong>Notes:</strong> ${notes || "None"}</p>
-
       <h3>Your Order:</h3>
       <ul>${itemList}</ul>
-
       <p><strong>Total:</strong> $${total.toFixed(2)}</p>
-
       <hr />
       <p>Please send your payment to:</p>
       <p><strong>Zelle:</strong> 945-400-5808</p>
       <p><strong>Venmo:</strong> @EleanaMachella</p>
-
-      <p>We'll start preparing your order as soon as we receive the payment.</p>
       <p style="font-weight: bold; color: #d63384;">Thank you for choosing Glow Bake!</p>
-
-      <div style="margin-top: 30px; text-align: center;">
-        <a href="https://www.instagram.com/glow.bake/" style="margin: 0 10px;">
-          <img src="https://glowbake.com/images/instagram.png" alt="Instagram" style="width: 24px; height: 24px;" />
-        </a>
-        <a href="https://www.facebook.com/profile.php?id=61578248566814" style="margin: 0 10px;">
-          <img src="https://glowbake.com/images/facebook.png" alt="Facebook" style="width: 24px; height: 24px;" />
-        </a>
-      </div>
     </div>
   `;
 
@@ -138,11 +123,7 @@ Address: ${
       ? "5614 Mystic Glade Way, Princeton, TX 75407"
       : address
   }  
-${deliveryMethod} Day: ${deliveryDay}${
-    deliveryMethod === "Pickup" && deliveryDay === "Other"
-      ? " (⚠️ Minimum purchase is 10 cookies for this service)"
-      : ""
-  }  
+${deliveryMethod} Day: ${deliveryDay}
 Notes: ${notes || "None"}
 
 Order:
@@ -180,7 +161,7 @@ Total: $${total.toFixed(2)}
       reply_to: "glowbakesosweet@gmail.com",
     });
 
-    return new Response("Order saved & emails sent!", { status: 200 });
+    return new Response("Order saved and emails sent!", { status: 200 });
   } catch (err) {
     console.error("Resend error:", err?.response?.data || err);
     return new Response("Error sending emails", { status: 500 });
