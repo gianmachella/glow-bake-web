@@ -1,17 +1,29 @@
 "use client";
 
-import { createContext, useContext, useState } from "react";
+import { createContext, useContext, useEffect, useState } from "react";
 
 const CartContext = createContext();
 
 export function CartProvider({ children }) {
   const [cartItems, setCartItems] = useState([]);
 
+  // ✅ cargar desde localStorage al iniciar
+  useEffect(() => {
+    const storedCart = localStorage.getItem("cart");
+    if (storedCart) {
+      setCartItems(JSON.parse(storedCart));
+    }
+  }, []);
+
+  // ✅ guardar en localStorage cada vez que cambie
+  useEffect(() => {
+    localStorage.setItem("cart", JSON.stringify(cartItems));
+  }, [cartItems]);
+
   const clearCart = () => {
     setCartItems([]);
   };
 
-  // 👉 Usado desde las cards para agregar productos con cantidad inicial
   const addToCart = (product) => {
     setCartItems((prevItems) => {
       const existing = prevItems.find((item) => item.id === product.id);
@@ -26,7 +38,6 @@ export function CartProvider({ children }) {
     });
   };
 
-  // 👉 Usado en el carrito para sumar +1
   const increment = (id) => {
     setCartItems((prevItems) =>
       prevItems.map((item) =>
@@ -35,7 +46,6 @@ export function CartProvider({ children }) {
     );
   };
 
-  // 👉 Usado en el carrito para restar -1
   const decrement = (id) => {
     setCartItems((prevItems) =>
       prevItems
@@ -46,7 +56,6 @@ export function CartProvider({ children }) {
     );
   };
 
-  // 👉 Usado en el carrito para eliminar un producto completo
   const deleteFromCart = (id) => {
     setCartItems((prevItems) => prevItems.filter((item) => item.id !== id));
   };
