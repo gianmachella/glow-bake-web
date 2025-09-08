@@ -53,11 +53,6 @@ export default function CartPage() {
     );
     const city = form.city.toLowerCase();
 
-    if (city.includes("princeton"))
-      return { free: true, message: "✅ Delivery is free in Princeton" };
-    if (city.includes("branch"))
-      return { free: true, message: "✅ Delivery is free in Branch" };
-
     if (miles <= 10.5) {
       return {
         free: true,
@@ -143,9 +138,7 @@ export default function CartPage() {
         html: "The 'Other' option is only for catering or special orders.<br/><strong>The minimum purchase is 10 cookies for this service.</strong><br/>Please contact us directly.",
         confirmButtonColor: "#ec4899",
       });
-      setNextAvailableDate(
-        `Contact us to schedule <br/> Only text: (945) 400 5808`
-      );
+      setNextAvailableDate(`Contact us to schedule Only text: (945) 400 5808`);
     }
 
     if (
