@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 
+import AddressInput from "@/components/AddressInput";
 import Link from "next/link";
 import Swal from "sweetalert2";
 import { useCart } from "@/context/CartContext";
@@ -15,10 +16,15 @@ export default function CartPage() {
     lastName: "",
     email: "",
     phone: "",
-    address: "",
     notes: "",
+    address: "",
+    city: "",
+    lat: "",
+    lon: "",
+    deliveryMethod: "", // Delivery o Pickup
     deliveryDay: "",
   });
+
   const [errors, setErrors] = useState({});
   const [loading, setLoading] = useState(false);
   const [disabledDays, setDisabledDays] = useState({
@@ -32,14 +38,66 @@ export default function CartPage() {
     0
   );
 
-  // 👉 función para calcular la próxima fecha disponible
+  // 📍 coordenadas de tu casa
+  const myHome = { lat: 33.08872595726599, lon: -96.50745228424731 };
+
+  // 📦 reglas de delivery
+  const getDeliveryMessage = (form, myHome) => {
+    if (!form.address || !form.lat || !form.lon) return null;
+
+    const miles = getDistanceMiles(
+      myHome.lat,
+      myHome.lon,
+      parseFloat(form.lat),
+      parseFloat(form.lon)
+    );
+    const city = form.city.toLowerCase();
+
+    if (city.includes("princeton"))
+      return { free: true, message: "✅ Delivery is free in Princeton" };
+    if (city.includes("branch"))
+      return { free: true, message: "✅ Delivery is free in Branch" };
+
+    if (miles <= 10.5) {
+      return {
+        free: true,
+        message: `✅ Delivery is free within 10.5 miles (${miles.toFixed(1)} mi)`,
+      };
+    }
+
+    const cost = miles * 1.5;
+    return {
+      free: false,
+      message: `🚚 Delivery cost: $${cost.toFixed(2)} (${miles.toFixed(1)} mi from our kitchen)`,
+    };
+  };
+
+  // 👉 distancia en millas
+  const getDistanceMiles = (lat1, lon1, lat2, lon2) => {
+    const R = 6371;
+    const dLat = (lat2 - lat1) * (Math.PI / 180);
+    const dLon = (lon2 - lon1) * (Math.PI / 180);
+
+    const a =
+      Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+      Math.cos(lat1 * (Math.PI / 180)) *
+        Math.cos(lat2 * (Math.PI / 180)) *
+        Math.sin(dLon / 2) *
+        Math.sin(dLon / 2);
+
+    const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+    const distanceKm = R * c;
+    return distanceKm * 0.621371;
+  };
+
+  // 👉 próxima fecha
   const getNextDate = (targetDay) => {
     const today = new Date();
     const day = today.getDay();
     const result = new Date(today);
 
     let daysToAdd = (targetDay + 7 - day) % 7;
-    if (daysToAdd === 0) daysToAdd = 7; // siempre la próxima, no hoy
+    if (daysToAdd === 0) daysToAdd = 7;
 
     result.setDate(today.getDate() + daysToAdd);
     return result.toLocaleDateString("en-US", {
@@ -50,17 +108,16 @@ export default function CartPage() {
     });
   };
 
-  // Chequear disponibilidad de jueves/viernes
+  // deshabilitar días
   useEffect(() => {
     const now = new Date();
     const today = now.getDay();
     const hours = now.getHours();
 
-    let disableThursday = false;
-    let disableFriday = false;
-
+    let disableThursday = false,
+      disableFriday = false;
     if (today === 4 && hours >= 9) disableThursday = true;
-    if (today === 5 && hours >= 0) disableThursday = true;
+    if (today === 5) disableThursday = true;
     if (today === 5 && hours >= 9) disableFriday = true;
 
     if (today === 6 || today === 0) {
@@ -74,25 +131,43 @@ export default function CartPage() {
   const handleChange = (e) => {
     const { name, value } = e.target;
 
-    if (name === "deliveryDay" && value === "Other") {
+    // reglas para pickup/delivery
+    if (
+      name === "deliveryDay" &&
+      value === "Other" &&
+      form.deliveryMethod === "Pickup"
+    ) {
       Swal.fire({
         icon: "info",
-        title: "Special Catering Orders",
-        text: "The 'Other' option is only available for catering or special orders. Please contact us directly for details.",
+        title: "Special Catering Orders (Pickup)",
+        html: "The 'Other' option is only for catering or special orders.<br/><strong>The minimum purchase is 10 cookies for this service.</strong><br/>Please contact us directly.",
         confirmButtonColor: "#ec4899",
       });
       setNextAvailableDate(
-        `Contact us to schedule <br/> Only text message : (945) 400 5808`
+        `Contact us to schedule <br/> Only text: (945) 400 5808`
       );
     }
 
-    if (name === "deliveryDay" && value === "Thursday") {
-      setNextAvailableDate(getNextDate(4));
+    if (
+      name === "deliveryDay" &&
+      value === "Other" &&
+      form.deliveryMethod === "Delivery"
+    ) {
+      Swal.fire({
+        icon: "info",
+        title: "Special Catering Orders (Delivery)",
+        html: "The 'Other' option is only for catering or special orders.<br/>Please contact us directly for details.",
+        confirmButtonColor: "#ec4899",
+      });
+      setNextAvailableDate(
+        `Contact us to schedule <br/> Only text: (945) 400 5808`
+      );
     }
 
-    if (name === "deliveryDay" && value === "Friday") {
+    if (name === "deliveryDay" && value === "Thursday")
+      setNextAvailableDate(getNextDate(4));
+    if (name === "deliveryDay" && value === "Friday")
       setNextAvailableDate(getNextDate(5));
-    }
 
     setForm({ ...form, [name]: value });
   };
@@ -103,9 +178,17 @@ export default function CartPage() {
     if (!form.lastName) newErrors.lastName = "Last name is required.";
     if (!form.email.includes("@")) newErrors.email = "Valid email required.";
     if (!form.phone) newErrors.phone = "Phone number required.";
-    if (!form.address) newErrors.address = "Address required.";
-    if (!form.deliveryDay)
-      newErrors.deliveryDay = "Please select a delivery day.";
+    if (!form.deliveryMethod)
+      newErrors.deliveryMethod = "Select delivery or pickup.";
+
+    if (form.deliveryMethod === "Delivery") {
+      if (!form.address) newErrors.address = "Address required.";
+      if (!form.deliveryDay) newErrors.deliveryDay = "Select a delivery day.";
+    }
+    if (form.deliveryMethod === "Pickup") {
+      if (!form.deliveryDay) newErrors.deliveryDay = "Select a pickup day.";
+    }
+
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
   };
@@ -126,11 +209,13 @@ export default function CartPage() {
           "success"
         );
         clearCart();
+        console.log("✅ Order saved to DB and email sent");
       } else {
         Swal.fire("Oops", "Something went wrong. Try again.", "error");
       }
     } catch (err) {
       Swal.fire("Error", "Could not send order.", "error");
+      console.error(err);
     } finally {
       setLoading(false);
     }
@@ -139,10 +224,10 @@ export default function CartPage() {
   return (
     <section className="w-full min-h-screen bg-pink-50 px-6 py-12 pt-24">
       <div className="max-w-7xl mx-auto">
-        <h1 className="text-3xl font-bold text-pink-600 mb-8">Your Cart</h1>
+        <h1 className="text-3xl font-bold text-pink-700 mb-8">Your Cart</h1>
 
         {cartItems.length === 0 ? (
-          <p className="text-gray-800">
+          <p className="text-gray-900">
             Your cart is empty.{" "}
             <Link href="/#menu" className="text-pink-600 underline">
               Continue shopping
@@ -150,6 +235,7 @@ export default function CartPage() {
           </p>
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-3 gap-10">
+            {/* Items */}
             <div className="md:col-span-2 space-y-6">
               {cartItems.map((item, idx) => (
                 <div
@@ -168,18 +254,17 @@ export default function CartPage() {
                           {item.name}
                         </h3>
                       </Link>
-                      <p className="text-sm text-gray-700">
+                      <p className="text-sm text-gray-800">
                         {item.quantity} × ${item.price.toFixed(2)}
                       </p>
                     </div>
                   </div>
-
-                  <div className="flex flex-col items-center md:flex-row md:items-center md:gap-4 w-full md:w-auto">
+                  <div className="flex flex-col items-center md:flex-row md:gap-4 w-full md:w-auto">
                     <div className="flex items-center gap-2 mb-2 md:mb-0">
                       <button
                         onClick={() => decrement(item.id)}
                         disabled={item.quantity <= 1}
-                        className="w-8 h-8 rounded-full bg-gray-300 hover:bg-pink-500 hover:text-white text-gray-800"
+                        className="w-8 h-8 rounded-full bg-gray-300 hover:bg-pink-500 hover:text-white text-gray-900"
                       >
                         -
                       </button>
@@ -188,7 +273,7 @@ export default function CartPage() {
                       </span>
                       <button
                         onClick={() => increment(item.id)}
-                        className="w-8 h-8 rounded-full bg-gray-300 hover:bg-pink-500 hover:text-white text-gray-800"
+                        className="w-8 h-8 rounded-full bg-gray-300 hover:bg-pink-500 hover:text-white text-gray-900"
                       >
                         +
                       </button>
@@ -198,31 +283,28 @@ export default function CartPage() {
                     </div>
                     <button
                       onClick={() => deleteFromCart(item.id)}
-                      className="text-xs text-red-500 hover:underline mt-2 md:mt-0"
+                      className="text-xs text-red-600 hover:underline mt-2 md:mt-0"
                     >
                       Remove
                     </button>
                   </div>
                 </div>
               ))}
-              <Link href="/#menu" className="text-pink-600 underline">
-                Continue shopping
-              </Link>
             </div>
 
-            {/* Right side - Form */}
+            {/* Form */}
             <div className="bg-white border rounded-xl p-6 h-fit shadow-sm">
               <h2 className="text-lg font-bold mb-4 text-gray-900">
                 Order Summary
               </h2>
-              <div className="flex justify-between mb-2 text-gray-800">
+              <div className="flex justify-between mb-2 text-gray-900">
                 <span>Subtotal</span>
                 <span className="font-semibold">${total.toFixed(2)}</span>
               </div>
               <div className="border-t my-2"></div>
               <div className="flex justify-between mb-4">
                 <span className="text-gray-900 font-bold">Total</span>
-                <span className="text-xl font-bold text-pink-600">
+                <span className="text-xl font-bold text-pink-700">
                   ${total.toFixed(2)}
                 </span>
               </div>
@@ -231,18 +313,19 @@ export default function CartPage() {
                 Checkout Info
               </h3>
               <div className="space-y-3">
-                {[
-                  { name: "name", placeholder: "* First Name" },
-                  { name: "lastName", placeholder: "* Last Name" },
-                  { name: "email", placeholder: "* Email", type: "email" },
-                  { name: "phone", placeholder: "* Phone", type: "tel" },
-                  { name: "address", placeholder: "* Shipping Address" },
-                ].map(({ name, placeholder, type = "text" }) => (
+                {/* Campos básicos */}
+                {["name", "lastName", "email", "phone"].map((name, i) => (
                   <div key={name} className="flex flex-col">
                     <input
-                      type={type}
+                      type={
+                        name === "email"
+                          ? "email"
+                          : name === "phone"
+                            ? "tel"
+                            : "text"
+                      }
                       name={name}
-                      placeholder={placeholder}
+                      placeholder={`* ${["First Name", "Last Name", "Email", "Phone"][i]}`}
                       value={form[name]}
                       onChange={handleChange}
                       className="w-full border border-gray-300 rounded px-3 py-2 text-sm text-gray-900"
@@ -252,9 +335,7 @@ export default function CartPage() {
                     </p>
                   </div>
                 ))}
-                <p className="text-xs text-gray-400 mt-1 h-4">
-                  * Required fields
-                </p>
+
                 {/* Notes */}
                 <div className="flex flex-col">
                   <textarea
@@ -264,66 +345,154 @@ export default function CartPage() {
                     onChange={handleChange}
                     className="w-full border border-gray-300 rounded px-3 py-2 text-sm text-gray-900 h-20 resize-none"
                   />
-                  <p className="h-4"></p>
                 </div>
-              </div>
 
-              {/* Delivery day */}
-              <div className="mt-4">
-                <label className="text-sm font-medium text-gray-900">
-                  Delivery day:
-                </label>
-                <div className="flex gap-4 mt-2">
-                  {["Thursday", "Friday", "Other"].map((day) => (
-                    <label
-                      key={day}
-                      className={`text-sm flex items-center gap-1 ${
-                        disabledDays[day] ? "text-gray-400" : "text-gray-800"
-                      }`}
-                    >
-                      <input
-                        type="radio"
-                        name="deliveryDay"
-                        value={day}
-                        checked={form.deliveryDay === day}
-                        onChange={handleChange}
-                        disabled={disabledDays[day]}
-                      />
-                      {day}
-                    </label>
-                  ))}
-                </div>
-                {nextAvailableDate && (
-                  <div className="mt-2">
-                    {form.deliveryDay === "Other" ? (
-                      <p
-                        className="text-xs text-gray-500"
-                        dangerouslySetInnerHTML={{ __html: nextAvailableDate }}
-                      />
-                    ) : (
-                      <>
-                        <p className="text-xs text-gray-500">
-                          <span className="font-bold">
-                            Next available {form.deliveryDay}:
-                          </span>{" "}
-                          <span className="italic">{nextAvailableDate}</span>
-                        </p>
-                        <p className="text-xs text-gray-500 border border-gray-300 bg-green-50 rounded-lg mt-3 p-3">
-                          Deliveries start at 4:30 PM on the selected day, and
-                          the delivery window may take up to two hours depending
-                          on the number of orders.
-                        </p>
-                      </>
-                    )}
+                {/* Radios: Delivery o Pickup */}
+                <div className="flex flex-col mt-3">
+                  <label className="text-sm font-medium text-gray-900">
+                    Choose:
+                  </label>
+                  <div className="flex gap-6 mt-2">
+                    {["Delivery", "Pickup"].map((method) => (
+                      <label
+                        key={method}
+                        className="text-sm flex items-center gap-1 text-gray-900"
+                      >
+                        <input
+                          type="radio"
+                          name="deliveryMethod"
+                          value={method}
+                          checked={form.deliveryMethod === method}
+                          onChange={handleChange}
+                        />
+                        {method}
+                      </label>
+                    ))}
                   </div>
+                  <p className="text-xs text-red-600 mt-1 h-4">
+                    {errors.deliveryMethod || ""}
+                  </p>
+                </div>
+
+                {/* Pickup */}
+                {form.deliveryMethod === "Pickup" && (
+                  <>
+                    <p className="mt-3 p-3 border rounded-lg bg-green-50 text-sm text-green-700 font-semibold">
+                      📍 Pickup at{" "}
+                      <b>5614 Mystic Glade Way, Princeton, TX 75407</b> <br />
+                      Thu & Fri, 4:00–6:00 PM
+                    </p>
+
+                    {/* Día de pickup */}
+                    <div className="mt-4">
+                      <label className="text-sm font-medium text-gray-900">
+                        Pickup day:
+                      </label>
+                      <div className="flex gap-4 mt-2">
+                        {["Thursday", "Friday", "Other"].map((day) => (
+                          <label
+                            key={day}
+                            className={`text-sm flex items-center gap-1 ${disabledDays[day] ? "text-gray-400" : "text-gray-900"}`}
+                          >
+                            <input
+                              type="radio"
+                              name="deliveryDay"
+                              value={day}
+                              checked={form.deliveryDay === day}
+                              onChange={handleChange}
+                              disabled={disabledDays[day]}
+                            />
+                            {day}
+                          </label>
+                        ))}
+                      </div>
+                      {nextAvailableDate && (
+                        <p className="text-xs text-gray-700 mt-1 italic">
+                          {nextAvailableDate}
+                        </p>
+                      )}
+                      <p className="text-xs text-red-600 mt-1 h-4">
+                        {errors.deliveryDay || ""}
+                      </p>
+                    </div>
+                  </>
                 )}
 
-                <p className="text-xs text-red-600 mt-1 h-4">
-                  {errors.deliveryDay || ""}
-                </p>
+                {/* Delivery */}
+                {form.deliveryMethod === "Delivery" && (
+                  <>
+                    <AddressInput
+                      inputText={form.address}
+                      onChange={(field, val) =>
+                        setForm((prev) => ({ ...prev, [field]: val }))
+                      }
+                      error={errors.address}
+                    />
+                    <input
+                      type="text"
+                      name="city"
+                      placeholder="City"
+                      value={form.city ?? ""}
+                      disabled
+                      className="w-full border border-gray-300 rounded px-3 py-2 text-sm text-gray-700 bg-gray-100"
+                    />
+
+                    {form.address && form.lat && form.lon && (
+                      <div className="mt-3 p-3 border rounded-lg bg-blue-50 text-sm text-gray-900">
+                        {(() => {
+                          const delivery = getDeliveryMessage(form, myHome);
+                          return (
+                            <p
+                              className={
+                                delivery.free
+                                  ? "text-green-700 font-semibold"
+                                  : "text-gray-900"
+                              }
+                            >
+                              {delivery.message}
+                            </p>
+                          );
+                        })()}
+                      </div>
+                    )}
+
+                    {/* Día de delivery */}
+                    <div className="mt-4">
+                      <label className="text-sm font-medium text-gray-900">
+                        Delivery day:
+                      </label>
+                      <div className="flex gap-4 mt-2">
+                        {["Thursday", "Friday", "Other"].map((day) => (
+                          <label
+                            key={day}
+                            className={`text-sm flex items-center gap-1 ${disabledDays[day] ? "text-gray-400" : "text-gray-900"}`}
+                          >
+                            <input
+                              type="radio"
+                              name="deliveryDay"
+                              value={day}
+                              checked={form.deliveryDay === day}
+                              onChange={handleChange}
+                              disabled={disabledDays[day]}
+                            />
+                            {day}
+                          </label>
+                        ))}
+                      </div>
+                      {nextAvailableDate && (
+                        <p className="text-xs text-gray-700 mt-1 italic">
+                          {nextAvailableDate}
+                        </p>
+                      )}
+                      <p className="text-xs text-red-600 mt-1 h-4">
+                        {errors.deliveryDay || ""}
+                      </p>
+                    </div>
+                  </>
+                )}
               </div>
 
-              {/* Legal disclaimer */}
+              {/* Disclaimer */}
               <div className="mt-5 border border-gray-300 bg-yellow-50 rounded-lg p-3 text-xs italic text-gray-800">
                 “This food is made in a home kitchen and is not inspected by the
                 Department of State Health Services or a local health
@@ -339,7 +508,7 @@ export default function CartPage() {
               </button>
               <button
                 onClick={clearCart}
-                className="mt-2 w-full bg-gray-200 hover:bg-gray-300 text-gray-800 text-sm font-semibold py-2 rounded-full"
+                className="mt-2 w-full bg-gray-200 hover:bg-gray-300 text-gray-900 text-sm font-semibold py-2 rounded-full"
               >
                 Empty Cart
               </button>

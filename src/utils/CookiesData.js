@@ -124,7 +124,7 @@ export const cookies = [
   },
   {
     id: "10",
-    name: "COOKIE & CREAM",
+    name: "COOKIES & CREAM",
     price: 7,
     image: "/images/cookies/cookiecream.png",
     images: [

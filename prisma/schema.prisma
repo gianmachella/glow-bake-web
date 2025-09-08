@@ -1,0 +1,72 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model Ingredient {
+  id        String   @id @default(cuid())
+  name      String
+  unit      String
+  unitPrice Float
+  recipes   Recipe[]
+}
+
+model Recipe {
+  id           String     @id @default(cuid())
+  ingredient   Ingredient @relation(fields: [ingredientId], references: [id])
+  ingredientId String
+  cookie       Cookie     @relation(fields: [cookieId], references: [id])
+  cookieId     String
+}
+
+model Cookie {
+  id               String      @id @default(cuid())
+  name             String
+  price            Float
+  shortDescription String?     // 👈 debe estar
+  description      String?
+  ingredients      String?
+  image            String?
+  images           String[]    // 👈 debe estar
+  createdAt        DateTime    @default(now())
+  updatedAt        DateTime    @updatedAt
+
+  recipes          Recipe[]
+  sales            Sale[]
+}
+
+
+model Customer {
+  id        String   @id @default(cuid())
+  name      String
+  lastName  String?
+  email     String?  @unique
+  phone     String?
+  address   String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  sales Sale[]
+}
+
+model Sale {
+  id         String   @id @default(cuid())
+  cookie     Cookie   @relation(fields: [cookieId], references: [id])
+  cookieId   String
+  customer   Customer @relation(fields: [customerId], references: [id])
+  customerId String
+  quantity   Int
+  total      Float
+  date       DateTime @default(now())
+}
+
+model Expense {
+  id          String   @id @default(cuid())
+  description String
+  amount      Float
+  createdAt   DateTime @default(now())
+}

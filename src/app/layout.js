@@ -1,10 +1,9 @@
 import "./globals.css";
 
 import { CartProvider } from "@/context/CartContext";
-import Footer from "@/components/Footer";
 import { Great_Vibes } from "next/font/google";
 import { Inter } from "next/font/google";
-import Navbar from "@/components/Navbar";
+import LayoutWrapper from "@/components/LayoutWrapper";
 
 const greatVibes = Great_Vibes({
   subsets: ["latin"],
@@ -35,12 +34,9 @@ export default function RootLayout({ children }) {
           rel="stylesheet"
         />
       </head>
-
       <body style={{ fontFamily: "'Happy Monkey', cursive" }}>
         <CartProvider>
-          <Navbar />
-          {children}
-          <Footer />
+          <LayoutWrapper>{children}</LayoutWrapper>
         </CartProvider>
       </body>
     </html>

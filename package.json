@@ -9,6 +9,8 @@
     "lint": "next lint"
   },
   "dependencies": {
+    "@prisma/client": "^6.15.0",
+    "@supabase/supabase-js": "^2.57.2",
     "framer-motion": "^12.23.6",
     "lucide-react": "^0.525.0",
     "next": "15.4.2",
@@ -17,10 +19,16 @@
     "react-dom": "19.1.0",
     "react-intersection-observer": "^9.16.0",
     "resend": "^4.7.0",
-    "sweetalert2": "^11.22.2"
+    "sweetalert2": "^11.22.2",
+    "use-places-autocomplete": "^4.0.1"
   },
   "devDependencies": {
     "@tailwindcss/postcss": "^4",
-    "tailwindcss": "^4"
+    "@types/node": "^24.3.1",
+    "@types/react": "19.1.12",
+    "prisma": "^6.15.0",
+    "tailwindcss": "^4",
+    "ts-node": "^10.9.2",
+    "typescript": "^5.9.2"
   }
 }
