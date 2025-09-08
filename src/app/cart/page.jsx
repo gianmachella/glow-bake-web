@@ -214,6 +214,10 @@ export default function CartPage() {
     }
   };
 
+  useEffect(() => {
+    window.scrollTo({ top: 0, behavior: "smooth" });
+  }, [cartItems]);
+
   return (
     <section className="w-full min-h-screen bg-pink-50 px-6 py-12 pt-24">
       <div className="max-w-7xl mx-auto">
