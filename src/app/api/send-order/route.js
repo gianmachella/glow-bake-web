@@ -34,8 +34,10 @@ export async function POST(req) {
     });
 
     for (const item of items) {
-      // 👇 ignorar delivery en DB
-      if (item.id === "delivery") continue;
+      // 👇 saltamos si no es un ID válido (ej: mock "3", "delivery")
+      if (!item.id || item.id === "delivery" || !item.id.startsWith("cm")) {
+        continue;
+      }
 
       await prisma.sale.create({
         data: {
