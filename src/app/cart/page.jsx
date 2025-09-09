@@ -6,6 +6,7 @@ import AddressInput from "@/components/AddressInput";
 import Link from "next/link";
 import Swal from "sweetalert2";
 import { useCart } from "@/context/CartContext";
+import { useRouter } from "next/navigation";
 
 export default function CartPage() {
   const { cartItems, clearCart, increment, decrement, deleteFromCart } =
@@ -38,6 +39,8 @@ export default function CartPage() {
     (sum, item) => sum + item.price * item.quantity,
     0
   );
+
+  const router = useRouter();
 
   // 📍 tu casa como origen
   const myHome = { lat: 33.190223, lon: -96.502784 };
@@ -78,7 +81,7 @@ export default function CartPage() {
   const getDeliveryMessage = () => {
     if (!form.address || !distanceMiles) return null;
 
-    if (distanceMiles <= 11) {
+    if (distanceMiles <= 9.5) {
       return { free: true, message: "✅ Delivery is free" };
     }
 
@@ -194,12 +197,42 @@ export default function CartPage() {
   const handleSendOrder = async () => {
     if (!validate()) return;
     setLoading(true);
+
     try {
+      const delivery = getDeliveryMessage();
+      const deliveryCost =
+        delivery && !delivery.free
+          ? parseFloat(delivery.message.match(/\$([\d.]+)/)?.[1] || 0)
+          : 0;
+
+      const itemsWithDelivery = [
+        ...cartItems,
+        ...(deliveryCost > 0
+          ? [
+              {
+                id: "delivery",
+                name: "Delivery",
+                price: deliveryCost,
+                quantity: 1,
+                images: ["/images/delivery.png"],
+              },
+            ]
+          : []),
+      ];
+
+      const grandTotal = total + deliveryCost;
+
       const res = await fetch("/api/send-order", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ ...form, total, items: cartItems }),
+        body: JSON.stringify({
+          ...form,
+          total, // 👉 solo subtotal sin delivery
+          deliveryFee: deliveryCost, // 👉 enviamos el fee por separado
+          items: itemsWithDelivery,
+        }),
       });
+
       if (res.ok) {
         Swal.fire(
           "Order Sent!",
@@ -207,7 +240,7 @@ export default function CartPage() {
           "success"
         );
         clearCart();
-        console.log("✅ Order saved to DB and email sent");
+        router.push("/#menu");
       } else {
         Swal.fire("Oops", "Something went wrong. Try again.", "error");
       }
@@ -246,10 +279,15 @@ export default function CartPage() {
                 >
                   <div className="flex items-center gap-4">
                     <img
-                      src={item.images[0]}
+                      src={
+                        item.images?.[0] ||
+                        item.image ||
+                        "/images/placeholder-cookie.png"
+                      }
                       alt={item.name}
                       className="w-24 h-24 object-cover rounded-lg border"
                     />
+
                     <div className="flex-1">
                       <Link href={`/cookies/${encodeURIComponent(item.id)}`}>
                         <h3 className="font-semibold text-gray-900">

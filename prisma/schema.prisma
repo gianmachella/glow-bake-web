@@ -15,30 +15,26 @@ model Ingredient {
   recipes   Recipe[]
 }
 
+model Cookie {
+  id          String   @id @default(cuid())
+  name        String   @unique
+  price       Float
+  description String?
+  ingredients String?
+  image       String?
+  sales       Sale[]
+  recipes     Recipe[] // 👈 inversa de Recipe.cookie
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+
 model Recipe {
   id           String     @id @default(cuid())
-  ingredient   Ingredient @relation(fields: [ingredientId], references: [id])
   ingredientId String
-  cookie       Cookie     @relation(fields: [cookieId], references: [id])
   cookieId     String
+  cookie       Cookie     @relation(fields: [cookieId], references: [id])
+  Ingredient   Ingredient @relation(fields: [ingredientId], references: [id])
 }
-
-model Cookie {
-  id               String      @id @default(cuid())
-  name             String
-  price            Float
-  shortDescription String?     // 👈 debe estar
-  description      String?
-  ingredients      String?
-  image            String?
-  images           String[]    // 👈 debe estar
-  createdAt        DateTime    @default(now())
-  updatedAt        DateTime    @updatedAt
-
-  recipes          Recipe[]
-  sales            Sale[]
-}
-
 
 model Customer {
   id        String   @id @default(cuid())

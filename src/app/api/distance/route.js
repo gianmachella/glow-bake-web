@@ -11,10 +11,10 @@ export async function POST(req) {
 
     const apiKey = process.env.OPENROUTE_API_KEY;
 
-    // 👇 Debug temporal con coordenadas fijas
-    const testUrl = `https://api.openrouteservice.org/v2/directions/driving-car?api_key=${apiKey}&start=-96.502784,33.190223&end=-96.636885,33.130533`;
+    // ✅ Construir la URL dinámica con origin y destination reales
+    const url = `https://api.openrouteservice.org/v2/directions/driving-car?api_key=${apiKey}&start=${origin}&end=${destination}`;
 
-    const response = await fetch(testUrl);
+    const response = await fetch(url);
     const data = await response.json();
 
     console.log("💡 OpenRoute raw:", data);
@@ -22,9 +22,7 @@ export async function POST(req) {
     if (!data.features) {
       return new Response(
         JSON.stringify({ error: "No route found", details: data }),
-        {
-          status: 400,
-        }
+        { status: 400 }
       );
     }
 
