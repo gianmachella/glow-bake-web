@@ -1,25 +1,15 @@
 import { Buffer } from "buffer";
-import { PrismaClient } from "@prisma/client";
+import prisma from "@/lib/prisma";
 import { supabase } from "@/lib/supabase";
 
-const prisma = new PrismaClient();
-
-// 📍 GET → lista todas las cookies
+// 📍 GET → lista cookies
 export async function GET() {
   try {
-    const cookies = await prisma.cookie.findMany({
-      orderBy: { createdAt: "desc" },
-    });
-    return new Response(JSON.stringify(cookies), { status: 200 });
+    const cookies = await prisma.cookie.findMany();
+    return Response.json(cookies);
   } catch (err) {
-    console.error("❌ Error obteniendo cookies:", err);
-    return new Response(
-      JSON.stringify({
-        error: "Error obteniendo cookies",
-        details: err.message,
-      }),
-      { status: 500 }
-    );
+    console.error("❌ Error fetching cookies:", err);
+    return Response.json([], { status: 200 }); // nunca rompas FE
   }
 }
 
