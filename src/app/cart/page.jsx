@@ -205,21 +205,6 @@ export default function CartPage() {
           ? parseFloat(delivery.message.match(/\$([\d.]+)/)?.[1] || 0)
           : 0;
 
-      const itemsWithDelivery = [
-        ...cartItems,
-        ...(deliveryCost > 0
-          ? [
-              {
-                id: "delivery",
-                name: "Delivery",
-                price: deliveryCost,
-                quantity: 1,
-                images: ["/images/delivery.png"],
-              },
-            ]
-          : []),
-      ];
-
       const grandTotal = total + deliveryCost;
 
       const res = await fetch("/api/send-order", {
@@ -227,9 +212,9 @@ export default function CartPage() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           ...form,
-          total, // 👉 solo subtotal sin delivery
-          deliveryFee: deliveryCost, // 👉 enviamos el fee por separado
-          items: itemsWithDelivery,
+          total, // 👈 subtotal sin delivery
+          deliveryFee: deliveryCost, // 👈 fee separado
+          items: cartItems, // 👈 solo cookies
         }),
       });
 
