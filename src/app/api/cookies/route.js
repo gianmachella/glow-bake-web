@@ -1,19 +1,20 @@
+// src/app/api/cookies/route.js
 import { Buffer } from "buffer";
-import prisma from "@/lib/prisma";
+import prisma from "@/lib/prisma"; // ✅ solo este, sin duplicar
 import { supabase } from "@/lib/supabase";
 
-// 📍 GET → lista cookies
+// 📍 GET → lista todas las cookies
 export async function GET() {
   try {
     const cookies = await prisma.cookie.findMany();
     return Response.json(cookies);
   } catch (err) {
     console.error("❌ Error fetching cookies:", err);
-    return Response.json([], { status: 200 }); // nunca rompas FE
+    return Response.json([], { status: 200 }); // devolvemos [] para no romper el FE
   }
 }
 
-// 📍 POST → crea una cookie nueva con imágenes
+// 📍 POST → crea cookie con imágenes
 export async function POST(req) {
   try {
     const formData = await req.formData();
@@ -58,7 +59,7 @@ export async function POST(req) {
         description,
         ingredients,
         image: uploads[0] || null,
-        images: uploads,
+        images: uploads, // ✅ en tu schema ya debe ser Json o String[]
       },
     });
 
