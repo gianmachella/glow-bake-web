@@ -78,11 +78,11 @@ export default function CartPage() {
   const getDeliveryMessage = () => {
     if (!form.address || !distanceMiles) return null;
 
-    if (distanceMiles <= 10) {
+    if (distanceMiles <= 11) {
       return { free: true, message: "✅ Delivery is free" };
     }
 
-    const cost = distanceMiles * 1.5;
+    const cost = distanceMiles * 1.2;
     return {
       free: false,
       message: `🚚 Delivery cost: $${cost.toFixed(
