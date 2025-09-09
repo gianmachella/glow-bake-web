@@ -1,6 +1,5 @@
 // app/api/send-order/route.js
 import { Resend } from "resend";
-import prisma from "@/lib/prisma";
 
 export async function POST(req) {
   const body = await req.json();
@@ -21,36 +20,7 @@ export async function POST(req) {
   console.log("🛒 Items recibidos:", items);
 
   if (!email || !email.includes("@")) {
-    console.error("Invalid email:", email);
     return new Response("Invalid email", { status: 400 });
-  }
-
-  // 📦 Guardar en DB
-  try {
-    const customer = await prisma.customer.upsert({
-      where: { email },
-      update: { name, lastName, phone, address },
-      create: { name, lastName, email, phone, address },
-    });
-
-    for (const item of items) {
-      // 👇 saltamos si no es un ID válido (ej: mock "3", "delivery")
-      if (!item.id || item.id === "delivery" || !item.id.startsWith("cm")) {
-        continue;
-      }
-
-      await prisma.sale.create({
-        data: {
-          cookieId: item.id,
-          customerId: customer.id,
-          quantity: item.quantity,
-          total: item.price * item.quantity,
-        },
-      });
-    }
-  } catch (err) {
-    console.error("❌ Error saving order in DB:", err);
-    return new Response("Error saving order", { status: 500 });
   }
 
   // 📧 Emails
@@ -58,7 +28,6 @@ export async function POST(req) {
 
   // Lista de productos
   const itemList = items
-    .filter((item) => item.id !== "delivery") // no listarlo como producto
     .map((item) => {
       const flavorList =
         item.flavors && Object.keys(item.flavors).length > 0
@@ -77,7 +46,7 @@ export async function POST(req) {
     })
     .join("");
 
-  // 👉 Delivery como línea separada en email
+  // Delivery separado
   const deliveryItem =
     deliveryMethod === "Delivery"
       ? `<li style="margin-bottom: 10px; font-weight: bold; color: #d63384;">
@@ -146,7 +115,6 @@ Notes: ${notes || "None"}
 
 Order:
 ${items
-  .filter((item) => item.id !== "delivery")
   .map((item) => {
     const flavors =
       item.flavors && Object.keys(item.flavors).length > 0
@@ -181,7 +149,7 @@ Total: $${grandTotal.toFixed(2)}
       reply_to: "glowbakesosweet@gmail.com",
     });
 
-    return new Response("Order saved and emails sent!", { status: 200 });
+    return new Response("Order processed and emails sent!", { status: 200 });
   } catch (err) {
     console.error("Resend error:", err?.response?.data || err);
     return new Response("Error sending emails", { status: 500 });
