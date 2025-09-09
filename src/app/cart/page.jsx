@@ -32,57 +32,63 @@ export default function CartPage() {
     Friday: false,
   });
   const [nextAvailableDate, setNextAvailableDate] = useState("");
+  const [distanceMiles, setDistanceMiles] = useState(null);
 
   const total = cartItems.reduce(
     (sum, item) => sum + item.price * item.quantity,
     0
   );
 
-  // 📍 coordenadas de tu casa
-  const myHome = { lat: 33.08872595726599, lon: -96.50745228424731 };
+  // 📍 tu casa como origen
+  const myHome = { lat: 33.190223, lon: -96.502784 };
 
-  // 📦 reglas de delivery
-  const getDeliveryMessage = (form, myHome) => {
-    if (!form.address || !form.lat || !form.lon) return null;
+  // 👉 fetchDistance
+  const fetchDistance = async (lat, lon) => {
+    try {
+      const res = await fetch("/api/distance", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          origin: [myHome.lon, myHome.lat], // lon,lat
+          destination: [parseFloat(lon), parseFloat(lat)], // lon,lat
+        }),
+      });
 
-    const miles = getDistanceMiles(
-      myHome.lat,
-      myHome.lon,
-      parseFloat(form.lat),
-      parseFloat(form.lon)
-    );
-    const city = form.city.toLowerCase();
-
-    if (miles <= 10.5) {
-      return {
-        free: true,
-        message: `✅ Delivery is free within 10.5 miles (${miles.toFixed(1)} mi)`,
-      };
+      const data = await res.json();
+      if (data.miles) {
+        setDistanceMiles(data.miles);
+      } else {
+        console.warn("❌ Error en la distancia:", data);
+        setDistanceMiles(null);
+      }
+    } catch (err) {
+      console.error("Fetch distance error:", err);
+      setDistanceMiles(null);
     }
-
-    const cost = miles * 1.5;
-    return {
-      free: false,
-      message: `🚚 Delivery cost: $${cost.toFixed(2)} (${miles.toFixed(1)} mi from our kitchen)`,
-    };
   };
 
-  // 👉 distancia en millas
-  const getDistanceMiles = (lat1, lon1, lat2, lon2) => {
-    const R = 6371;
-    const dLat = (lat2 - lat1) * (Math.PI / 180);
-    const dLon = (lon2 - lon1) * (Math.PI / 180);
+  // cuando cambia la dirección → calculamos distancia
+  useEffect(() => {
+    if (form.lat && form.lon) {
+      fetchDistance(form.lat, form.lon);
+    }
+  }, [form.lat, form.lon]);
 
-    const a =
-      Math.sin(dLat / 2) * Math.sin(dLat / 2) +
-      Math.cos(lat1 * (Math.PI / 180)) *
-        Math.cos(lat2 * (Math.PI / 180)) *
-        Math.sin(dLon / 2) *
-        Math.sin(dLon / 2);
+  // 📦 reglas de delivery
+  const getDeliveryMessage = () => {
+    if (!form.address || !distanceMiles) return null;
 
-    const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
-    const distanceKm = R * c;
-    return distanceKm * 0.621371;
+    if (distanceMiles <= 10) {
+      return { free: true, message: "✅ Delivery is free" };
+    }
+
+    const cost = distanceMiles * 1.5;
+    return {
+      free: false,
+      message: `🚚 Delivery cost: $${cost.toFixed(
+        2
+      )} (${distanceMiles.toFixed(1)} mi from our kitchen)`,
+    };
   };
 
   // 👉 próxima fecha
@@ -126,7 +132,6 @@ export default function CartPage() {
   const handleChange = (e) => {
     const { name, value } = e.target;
 
-    // reglas para pickup/delivery
     if (
       name === "deliveryDay" &&
       value === "Other" &&
@@ -389,7 +394,11 @@ export default function CartPage() {
                         {["Thursday", "Friday", "Other"].map((day) => (
                           <label
                             key={day}
-                            className={`text-sm flex items-center gap-1 ${disabledDays[day] ? "text-gray-400" : "text-gray-900"}`}
+                            className={`text-sm flex items-center gap-1 ${
+                              disabledDays[day]
+                                ? "text-gray-400"
+                                : "text-gray-900"
+                            }`}
                           >
                             <input
                               type="radio"
@@ -434,10 +443,10 @@ export default function CartPage() {
                       className="w-full border border-gray-300 rounded px-3 py-2 text-sm text-gray-700 bg-gray-100"
                     />
 
-                    {form.address && form.lat && form.lon && (
+                    {form.address && form.lat && form.lon && distanceMiles && (
                       <div className="mt-3 p-3 border rounded-lg bg-blue-50 text-sm text-gray-900">
                         {(() => {
-                          const delivery = getDeliveryMessage(form, myHome);
+                          const delivery = getDeliveryMessage();
                           return (
                             <p
                               className={
@@ -462,7 +471,11 @@ export default function CartPage() {
                         {["Thursday", "Friday", "Other"].map((day) => (
                           <label
                             key={day}
-                            className={`text-sm flex items-center gap-1 ${disabledDays[day] ? "text-gray-400" : "text-gray-900"}`}
+                            className={`text-sm flex items-center gap-1 ${
+                              disabledDays[day]
+                                ? "text-gray-400"
+                                : "text-gray-900"
+                            }`}
                           >
                             <input
                               type="radio"
