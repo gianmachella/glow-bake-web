@@ -21,12 +21,14 @@ model Cookie {
   price       Float
   description String?
   ingredients String?
-  image       String?
-  sales       Sale[]
-  recipes     Recipe[] // 👈 inversa de Recipe.cookie
+  image       String?       // imagen principal
+  images      String[] @default([]) // 👈 array de strings para extras
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
+  sales       Sale[]
+  recipes     Recipe[]
 }
+
 
 model Recipe {
   id           String     @id @default(cuid())
