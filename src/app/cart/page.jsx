@@ -2,7 +2,6 @@
 
 import { useEffect, useState } from "react";
 
-import AddressInput from "@/components/AddressInput";
 import Link from "next/link";
 import Swal from "sweetalert2";
 import { useCart } from "@/context/CartContext";
@@ -20,8 +19,6 @@ export default function CartPage() {
     notes: "",
     address: "",
     city: "",
-    lat: "",
-    lon: "",
     deliveryMethod: "", // Delivery o Pickup
     deliveryDay: "",
   });
@@ -33,7 +30,6 @@ export default function CartPage() {
     Friday: false,
   });
   const [nextAvailableDate, setNextAvailableDate] = useState("");
-  const [distanceMiles, setDistanceMiles] = useState(null);
 
   const total = cartItems.reduce(
     (sum, item) => sum + item.price * item.quantity,
@@ -42,56 +38,24 @@ export default function CartPage() {
 
   const router = useRouter();
 
-  // 📍 tu casa como origen
-  const myHome = { lat: 33.190223, lon: -96.502784 };
-
-  // 👉 fetchDistance
-  const fetchDistance = async (lat, lon) => {
-    try {
-      const res = await fetch("/api/distance", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          origin: [myHome.lon, myHome.lat], // lon,lat
-          destination: [parseFloat(lon), parseFloat(lat)], // lon,lat
-        }),
-      });
-
-      const data = await res.json();
-      if (data.miles) {
-        setDistanceMiles(data.miles);
-      } else {
-        console.warn("❌ Error en la distancia:", data);
-        setDistanceMiles(null);
-      }
-    } catch (err) {
-      console.error("Fetch distance error:", err);
-      setDistanceMiles(null);
-    }
-  };
-
-  // cuando cambia la dirección → calculamos distancia
-  useEffect(() => {
-    if (form.lat && form.lon) {
-      fetchDistance(form.lat, form.lon);
-    }
-  }, [form.lat, form.lon]);
-
-  // 📦 reglas de delivery
+  // 📦 reglas de delivery por ciudad
   const getDeliveryMessage = () => {
-    if (!form.address || !distanceMiles) return null;
-
-    if (distanceMiles <= 9.5) {
-      return { free: true, message: "✅ Delivery is free" };
+    switch (form.city) {
+      case "Princeton":
+        return { free: true, cost: 0, message: "✅ Delivery is free" };
+      case "McKinney":
+        return { free: false, cost: 16, message: "🚚 Delivery cost: $16" };
+      case "Farmersville":
+        return { free: false, cost: 12, message: "🚚 Delivery cost: $12" };
+      case "Lucas":
+        return { free: false, cost: 10, message: "🚚 Delivery cost: $10" };
+      case "Wylie":
+        return { free: false, cost: 16, message: "🚚 Delivery cost: $16" };
+      case "Allen":
+        return { free: false, cost: 16, message: "🚚 Delivery cost: $16" };
+      default:
+        return null;
     }
-
-    const cost = distanceMiles * 1.2;
-    return {
-      free: false,
-      message: `🚚 Delivery cost: $${cost.toFixed(
-        2
-      )} (${distanceMiles.toFixed(1)} mi from our kitchen)`,
-    };
   };
 
   // 👉 próxima fecha
@@ -184,6 +148,7 @@ export default function CartPage() {
 
     if (form.deliveryMethod === "Delivery") {
       if (!form.address) newErrors.address = "Address required.";
+      if (!form.city) newErrors.city = "Select a city.";
       if (!form.deliveryDay) newErrors.deliveryDay = "Select a delivery day.";
     }
     if (form.deliveryMethod === "Pickup") {
@@ -200,11 +165,7 @@ export default function CartPage() {
 
     try {
       const delivery = getDeliveryMessage();
-      const deliveryCost =
-        delivery && !delivery.free
-          ? parseFloat(delivery.message.match(/\$([\d.]+)/)?.[1] || 0)
-          : 0;
-
+      const deliveryCost = delivery && !delivery.free ? delivery.cost : 0;
       const grandTotal = total + deliveryCost;
 
       const res = await fetch("/api/send-order", {
@@ -450,35 +411,59 @@ export default function CartPage() {
                 {/* Delivery */}
                 {form.deliveryMethod === "Delivery" && (
                   <>
-                    <AddressInput
-                      inputText={form.address}
-                      onChange={(field, val) =>
-                        setForm((prev) => ({ ...prev, [field]: val }))
-                      }
-                      error={errors.address}
-                    />
-                    <input
-                      type="text"
-                      name="city"
-                      placeholder="City"
-                      value={form.city ?? ""}
-                      disabled
-                      className="w-full border border-gray-300 rounded px-3 py-2 text-sm text-gray-700 bg-gray-100"
-                    />
+                    {/* Address */}
+                    <div className="flex flex-col">
+                      <input
+                        type="text"
+                        name="address"
+                        placeholder="* Address"
+                        value={form.address}
+                        onChange={handleChange}
+                        className="w-full border border-gray-300 rounded px-3 py-2 text-sm text-gray-900"
+                      />
+                      <p className="text-xs text-red-600 mt-1 h-4">
+                        {errors.address || ""}
+                      </p>
+                    </div>
 
-                    {form.address && form.lat && form.lon && distanceMiles && (
+                    {/* City */}
+                    <div className="flex flex-col mt-3">
+                      <label className="text-sm font-medium text-gray-900 mb-1">
+                        City
+                      </label>
+                      <select
+                        name="city"
+                        value={form.city}
+                        onChange={handleChange}
+                        className="w-full border border-gray-300 rounded px-3 py-2 text-sm text-gray-900 bg-white"
+                      >
+                        <option value="">Select a city</option>
+                        <option value="Princeton">Princeton</option>
+                        <option value="McKinney">McKinney</option>
+                        <option value="Farmersville">Farmersville</option>
+                        <option value="Lucas">Lucas</option>
+                        <option value="Wylie">Wylie</option>
+                        <option value="Allen">Allen</option>
+                      </select>
+                      <p className="text-xs text-red-600 mt-1 h-4">
+                        {errors.city || ""}
+                      </p>
+                    </div>
+
+                    {/* Fee message */}
+                    {form.city && (
                       <div className="mt-3 p-3 border rounded-lg bg-blue-50 text-sm text-gray-900">
                         {(() => {
                           const delivery = getDeliveryMessage();
                           return (
                             <p
                               className={
-                                delivery.free
+                                delivery?.free
                                   ? "text-green-700 font-semibold"
                                   : "text-gray-900"
                               }
                             >
-                              {delivery.message}
+                              {delivery?.message}
                             </p>
                           );
                         })()}
