@@ -118,7 +118,7 @@ export default function DashboardLayout({ children }) {
           <LogOut size={16} />
           Logout
         </motion.button>
-        <p>Created By Gian Machella</p>
+        <p className="text-black text-sm">Created By Gian Machella</p>
       </aside>
 
       {/* Main content con padding a la izquierda para no tapar el sidebar */}
