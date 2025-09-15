@@ -7,7 +7,7 @@
     "build": "next build",
     "start": "next start",
     "lint": "next lint",
-    "postinstall": "prisma generate",
+    "postinstall": "prisma generate && prisma migrate deploy",
     "seed:prod": "node prisma/seed-prod.js",
     "seed": "node prisma/seed.js",
     "seed:create-user": "node prisma/seed-create-user.js"
