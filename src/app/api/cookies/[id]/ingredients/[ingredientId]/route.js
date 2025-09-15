@@ -1,0 +1,143 @@
+import { prisma } from "@/lib/prisma";
+
+async function recalcCookieCost(cookieId) {
+  const recipes = await prisma.recipe.findMany({
+    where: { cookieId },
+    include: { baseDough: true, ingredients: true },
+  });
+
+  if (!recipes.length) return 0;
+
+  return recipes.reduce((acc, recipe) => acc + recipe.totalCost, 0);
+}
+
+function convertQuantity(value, fromUnit, toUnit) {
+  const factors = {
+    G: 1,
+    KG: 1000,
+    MG: 0.001,
+    LB: 453.592,
+    OZ: 28.3495,
+    ML: 1,
+    L: 1000,
+    FLOZ: 29.5735,
+    CUP: 240,
+    TBSP: 15,
+    TSP: 5,
+    PT: 473.176,
+    QT: 946.353,
+    GAL: 3785.41,
+    UNIT: 1,
+    PACK: 1,
+  };
+
+  if (!factors[fromUnit] || !factors[toUnit]) {
+    throw new Error(`Conversión no soportada: ${fromUnit} -> ${toUnit}`);
+  }
+
+  return (value * factors[fromUnit]) / factors[toUnit];
+}
+
+// PUT: actualizar ingrediente en receta
+export async function PUT(req, { params }) {
+  try {
+    const { ingredientId, id: cookieId } = params;
+    const body = await req.json();
+    const { quantityUsed, unitType } = body;
+
+    const recipeIngredient = await prisma.recipeIngredient.findUnique({
+      where: { id: ingredientId },
+      include: { ingredient: true, recipe: true },
+    });
+    if (!recipeIngredient) {
+      return Response.json(
+        { error: "RecipeIngredient no encontrado" },
+        { status: 404 }
+      );
+    }
+
+    const dbIngredient = await prisma.ingredient.findUnique({
+      where: { id: recipeIngredient.ingredientId },
+    });
+
+    const qtyInInventoryUnit = convertQuantity(
+      Number(quantityUsed) || 0,
+      unitType,
+      dbIngredient.unitType
+    );
+
+    const cost =
+      (dbIngredient.price / dbIngredient.unitQuantity) * qtyInInventoryUnit;
+
+    const updated = await prisma.recipeIngredient.update({
+      where: { id: ingredientId },
+      data: { quantityUsed, cost },
+      include: { ingredient: true },
+    });
+
+    // recalcular costo de la receta
+    const ingredients = await prisma.recipeIngredient.findMany({
+      where: { recipeId: recipeIngredient.recipeId },
+    });
+    const totalCost = ingredients.reduce((acc, ing) => acc + ing.cost, 0);
+    await prisma.recipe.update({
+      where: { id: recipeIngredient.recipeId },
+      data: { totalCost },
+    });
+
+    // recalcular costo de la cookie
+    const cookieCost = await recalcCookieCost(cookieId);
+    await prisma.cookie.update({
+      where: { id: cookieId },
+      data: { cost: cookieCost },
+    });
+
+    return Response.json(updated);
+  } catch (error) {
+    console.error("❌ Error PUT recipe ingredient:", error);
+    return Response.json({ error: error.message }, { status: 500 });
+  }
+}
+
+// DELETE: eliminar ingrediente de receta
+export async function DELETE(_, { params }) {
+  try {
+    const { ingredientId, id: cookieId } = params;
+
+    const recipeIngredient = await prisma.recipeIngredient.findUnique({
+      where: { id: ingredientId },
+    });
+    if (!recipeIngredient) {
+      return Response.json(
+        { error: "RecipeIngredient no encontrado" },
+        { status: 404 }
+      );
+    }
+
+    await prisma.recipeIngredient.delete({ where: { id: ingredientId } });
+
+    // recalcular costo de la receta
+    const ingredients = await prisma.recipeIngredient.findMany({
+      where: { recipeId: recipeIngredient.recipeId },
+    });
+    const totalCost = ingredients.reduce((acc, ing) => acc + ing.cost, 0);
+    await prisma.recipe.update({
+      where: { id: recipeIngredient.recipeId },
+      data: { totalCost },
+    });
+
+    // recalcular costo de la cookie
+    const cookieCost = await recalcCookieCost(cookieId);
+    await prisma.cookie.update({
+      where: { id: cookieId },
+      data: { cost: cookieCost },
+    });
+
+    return Response.json({
+      message: "Ingrediente eliminado y costos actualizados",
+    });
+  } catch (error) {
+    console.error("❌ Error DELETE recipe ingredient:", error);
+    return Response.json({ error: error.message }, { status: 500 });
+  }
+}

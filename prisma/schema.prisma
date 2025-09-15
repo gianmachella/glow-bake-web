@@ -3,39 +3,121 @@ generator client {
 }
 
 datasource db {
-  provider = "postgresql"
+  provider = "mysql"
   url      = env("DATABASE_URL")
 }
 
-model Ingredient {
-  id        String   @id @default(cuid())
-  name      String
-  unit      String
-  unitPrice Float
-  recipes   Recipe[]
+enum Unit {
+  // --- Métricas ---
+  G
+  KG
+  MG
+  ML
+  L
+
+  // --- US Customary ---
+  OZ
+  LB
+  FLOZ
+  CUP
+  TBSP
+  TSP
+  PT
+  QT
+  GAL
+
+  // --- Universales ---
+  UNIT // pieza, huevo, etc.
+  PACK // paquete
 }
 
 model Cookie {
-  id          String   @id @default(cuid())
-  name        String   @unique
-  price       Float
-  description String?
-  ingredients String?
-  image       String?       // imagen principal
-  images      String[] @default([]) // 👈 array de strings para extras
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
-  sales       Sale[]
+  id               String     @id @default(cuid())
+  name             String     @unique
+  price            Float
+  shortDescription String?    @db.Text
+  description      String?    @db.Text
+  ingredients      String?    @db.Text
+  image            String?
+  images           Json?
+  visible          Boolean    @default(true)
+  createdAt        DateTime   @default(now())
+  updatedAt        DateTime   @updatedAt
+  saleItems        SaleItem[]
+  recipes          Recipe[]
+  cost             Float      @default(0)
+
+  // 👇 Agregamos estas relaciones inversas
+  doughInventories DoughInventory[]
+}
+
+model Ingredient {
+  id           String   @id @default(cuid())
+  name         String
+  unitType     Unit
+  unitQuantity Float // cantidad total del paquete
+  price        Float
+  remaining    Float
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  baseDoughIngredients BaseDoughIngredient[]
+  recipeIngredients    RecipeIngredient[]
+}
+
+model BaseDough {
+  id        String   @id @default(cuid())
+  name      String
+  totalCost Float    @default(0)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  ingredients BaseDoughIngredient[]
   recipes     Recipe[]
 }
 
+model DoughInventory {
+  id        String   @id @default(cuid())
+  cookieId  String
+  cookie    Cookie   @relation(fields: [cookieId], references: [id])
+  quantity  Int
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model BaseDoughIngredient {
+  id           String @id @default(cuid())
+  baseDoughId  String
+  ingredientId String
+  quantityUsed Float
+  cost         Float
+
+  baseDough  BaseDough  @relation(fields: [baseDoughId], references: [id])
+  ingredient Ingredient @relation(fields: [ingredientId], references: [id])
+}
 
 model Recipe {
-  id           String     @id @default(cuid())
+  id          String   @id @default(cuid())
+  cookieId    String
+  baseDoughId String
+  totalCost   Float    @default(0)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  baseDough   BaseDough          @relation(fields: [baseDoughId], references: [id])
+  cookie      Cookie             @relation(fields: [cookieId], references: [id])
+  ingredients RecipeIngredient[]
+}
+
+model RecipeIngredient {
+  id           String @id @default(cuid())
+  recipeId     String
   ingredientId String
-  cookieId     String
-  cookie       Cookie     @relation(fields: [cookieId], references: [id])
-  Ingredient   Ingredient @relation(fields: [ingredientId], references: [id])
+  quantityUsed Float
+  cost         Float
+
+  recipe     Recipe     @relation(fields: [recipeId], references: [id])
+  ingredient Ingredient @relation(fields: [ingredientId], references: [id])
 }
 
 model Customer {
@@ -52,19 +134,42 @@ model Customer {
 }
 
 model Sale {
-  id         String   @id @default(cuid())
-  cookie     Cookie   @relation(fields: [cookieId], references: [id])
-  cookieId   String
-  customer   Customer @relation(fields: [customerId], references: [id])
+  id             String      @id @default(cuid())
+  total          Float
+  deliveryDay    String      // 👈 aquí agregamos el campo
+  deliveryMethod String
+  createdAt      DateTime    @default(now())
+  updatedAt      DateTime    @updatedAt
+
+  customer   Customer  @relation(fields: [customerId], references: [id])
   customerId String
-  quantity   Int
-  total      Float
-  date       DateTime @default(now())
+  items      SaleItem[]
+}
+
+model SaleItem {
+  id       String @id @default(cuid())
+  sale     Sale   @relation(fields: [saleId], references: [id])
+  saleId   String
+  cookie   Cookie @relation(fields: [cookieId], references: [id])
+  cookieId String
+  quantity Int
+  price    Float // precio unitario histórico en el momento de la venta
 }
 
 model Expense {
   id          String   @id @default(cuid())
   description String
   amount      Float
+  category    String? // opcional para clasificar gastos
   createdAt   DateTime @default(now())
 }
+
+model User {
+  id        String   @id @default(cuid())
+  email     String   @unique
+  password  String
+  role      String   @default("ADMIN")
+  createdAt DateTime @default(now())
+}
+
+

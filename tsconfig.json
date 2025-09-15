@@ -28,7 +28,9 @@
     ".next/types/**/*.ts",
     "**/*.ts",
     "**/*.tsx",
-    "src/app/dashboard/page.jsx"
+    "src/app/dashboard/page.jsx",
+    "src/app/api/ingredients/route.js",
+    "src/middleware.js"
   ],
   "exclude": ["node_modules"]
 }

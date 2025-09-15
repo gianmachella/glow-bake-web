@@ -41,3 +41,14 @@ body {
 html {
   scroll-behavior: smooth;
 }
+
+::-webkit-scrollbar {
+  width: 4px; /* super fina */
+}
+::-webkit-scrollbar-thumb {
+  background-color: #f9a8d4; /* rosa clarito */
+  border-radius: 9999px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}

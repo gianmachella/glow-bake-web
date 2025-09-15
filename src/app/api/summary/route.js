@@ -1,6 +1,4 @@
-import { PrismaClient } from "@prisma/client";
-
-const prisma = new PrismaClient();
+import { prisma } from "@/lib/prisma";
 
 export async function GET() {
   try {
@@ -10,10 +8,10 @@ export async function GET() {
       _count: true,
     });
 
-    // Galletas más vendidas
-    const topCookies = await prisma.sale.groupBy({
+    // Galletas más vendidas (basado en SaleItem)
+    const topCookies = await prisma.saleItem.groupBy({
       by: ["cookieId"],
-      _sum: { quantity: true, total: true },
+      _sum: { quantity: true, price: true },
       orderBy: { _sum: { quantity: "desc" } },
       take: 5,
     });
@@ -28,7 +26,7 @@ export async function GET() {
           cookieId: item.cookieId,
           name: cookie?.name ?? "Desconocida",
           totalSold: item._sum.quantity ?? 0,
-          totalRevenue: item._sum.total ?? 0,
+          totalRevenue: (item._sum.quantity ?? 0) * (cookie?.price ?? 0),
         };
       })
     );
@@ -55,12 +53,10 @@ export async function GET() {
       headers: { "Content-Type": "application/json" },
     });
   } catch (error) {
-    console.error("Error generating summary:", error);
+    console.error("❌ Error generating summary:", error);
     return new Response(JSON.stringify({ error: "Error generating summary" }), {
       status: 500,
       headers: { "Content-Type": "application/json" },
     });
-  } finally {
-    await prisma.$disconnect();
   }
 }
