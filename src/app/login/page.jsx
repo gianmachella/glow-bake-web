@@ -47,7 +47,7 @@ export default function LoginPage() {
           transition={{ delay: 0.3 }}
           className="text-3xl font-extrabold text-center text-gray-900"
         >
-          Welcome
+          Welcome!
         </motion.h1>
         <p className="text-center text-gray-600 text-sm">Sign in to continue</p>
 
