@@ -28,7 +28,7 @@ export default function CookieCard({ cookie, index }) {
       transition={{ duration: 1.2, delay: index * 0.4 }}
       className="relative cursor-pointer bg-white p-4 rounded-2xl shadow-md hover:shadow-lg transition-transform hover:scale-105 flex flex-col h-full"
     >
-      {cookie.new && (
+      {cookie.isNew && ( // 👈 ahora usamos isNew
         <img
           src="/images/cookies/new.png"
           alt="New"

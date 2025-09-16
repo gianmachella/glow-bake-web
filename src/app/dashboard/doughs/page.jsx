@@ -253,7 +253,7 @@ export default function DoughsPage() {
                   placeholder="Nombre de la masa"
                   value={form.name}
                   onChange={(e) => setForm({ ...form, name: e.target.value })}
-                  className="w-full p-3 border rounded-xl focus:ring-2 focus:ring-pink-400 outline-none"
+                  className="w-full p-3 border text-black rounded-xl focus:ring-2 focus:ring-pink-400 outline-none"
                   required
                 />
 

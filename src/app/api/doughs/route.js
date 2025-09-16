@@ -1,35 +1,39 @@
 import { prisma } from "@/lib/prisma";
 
 // Conversión de unidades a una base (gramos o mililitros)
-function convertQuantity(value, fromUnit, toUnit) {
+function convertQuantity(value, fromUnit, toUnit, ingredientName = "") {
   const factors = {
-    // masa
-    G: 1,
-    KG: 1000,
-    MG: 0.001,
-    LB: 453.592,
-    OZ: 28.3495,
-    // volumen
-    ML: 1,
-    L: 1000,
-    FLOZ: 29.5735,
-    CUP: 240,
-    TBSP: 15,
-    TSP: 5,
-    PT: 473.176,
-    QT: 946.353,
-    GAL: 3785.41,
-    // universales
-    UNIT: 1,
-    PACK: 1,
+    g: 1,
+    kg: 1000,
+    mg: 0.001,
+    lb: 453.592,
+    oz: 28.3495,
+    ml: 1,
+    l: 1000,
+    cup: 240,
+    tbsp: 15,
+    tsp: 5,
+    unidad: 1,
+    pack: 1,
   };
 
-  if (!factors[fromUnit] || !factors[toUnit]) {
-    throw new Error(`Conversión no soportada: ${fromUnit} -> ${toUnit}`);
+  // normalizar a minúsculas
+  fromUnit = fromUnit?.toLowerCase();
+  toUnit = toUnit?.toLowerCase();
+
+  if (!fromUnit) {
+    throw new Error(
+      `⚠️ Falta seleccionar unidad para el ingrediente "${ingredientName}"`
+    );
   }
 
-  // convierte a base (g o ml) y luego a la unidad destino
-  return (value * factors[fromUnit]) / factors[toUnit];
+  if (!factors[fromUnit] || !factors[toUnit]) {
+    throw new Error(`❌ Conversión no soportada: ${fromUnit} -> ${toUnit}`);
+  }
+
+  // convertir a gramos/ml base
+  const baseValue = value * factors[fromUnit];
+  return baseValue / factors[toUnit];
 }
 
 // GET: todas las masas base
@@ -67,11 +71,11 @@ export async function POST(req) {
 
       const qty = Number(ing.quantityUsed) || 0;
 
-      // convertir la cantidad usada a la unidad del inventario
       const qtyInInventoryUnit = convertQuantity(
         qty,
-        ing.unitType, // unidad enviada desde el cliente
-        dbIngredient.unitType // unidad en inventario
+        ing.unit, // 👈 unidad enviada desde el cliente
+        dbIngredient.unitType,
+        dbIngredient.name // 👈 para mensaje claro
       );
 
       const cost =
@@ -97,8 +101,10 @@ export async function POST(req) {
 
     return Response.json(newDough);
   } catch (error) {
-    console.error("❌ Error POST dough:", error);
-    return new Response("Error creating base dough", { status: 500 });
+    console.error("❌ Error POST dough:", error.message || error);
+    return new Response(error.message || "Error creating base dough", {
+      status: 500,
+    });
   }
 }
 
@@ -125,8 +131,9 @@ export async function PUT(req) {
 
       const qtyInInventoryUnit = convertQuantity(
         qty,
-        ing.unitType,
-        dbIngredient.unitType
+        ing.unit,
+        dbIngredient.unitType,
+        dbIngredient.name
       );
 
       const cost =
@@ -155,8 +162,10 @@ export async function PUT(req) {
 
     return Response.json(updatedDough);
   } catch (error) {
-    console.error("❌ Error PUT base dough:", error);
-    return new Response("Error updating base dough", { status: 500 });
+    console.error("❌ Error PUT dough:", error.message || error);
+    return new Response(error.message || "Error updating base dough", {
+      status: 500,
+    });
   }
 }
 
@@ -175,7 +184,9 @@ export async function DELETE(req) {
 
     return new Response("Dough deleted successfully", { status: 200 });
   } catch (error) {
-    console.error("❌ Error DELETE base dough:", error);
-    return new Response("Error deleting base dough", { status: 500 });
+    console.error("❌ Error DELETE dough:", error.message || error);
+    return new Response(error.message || "Error deleting base dough", {
+      status: 500,
+    });
   }
 }

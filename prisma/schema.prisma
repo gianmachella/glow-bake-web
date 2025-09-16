@@ -8,48 +8,46 @@ datasource db {
 }
 
 enum Unit {
-  // --- Métricas ---
-  G
-  KG
-  MG
-  ML
-  L
-
-  // --- US Customary ---
-  OZ
-  LB
-  FLOZ
-  CUP
-  TBSP
-  TSP
-  PT
-  QT
-  GAL
-
-  // --- Universales ---
-  UNIT // pieza, huevo, etc.
-  PACK // paquete
+  g     @map("G")
+  kg    @map("KG")
+  mg    @map("MG")
+  ml    @map("ML")
+  l     @map("L")
+  oz    @map("OZ")
+  lb    @map("LB")
+  floz  @map("FLOZ")
+  cup   @map("CUP")
+  tbsp  @map("TBSP")
+  tsp   @map("TSP")
+  pt    @map("PT")
+  qt    @map("QT")
+  gal   @map("GAL")
+  unidad @map("UNIT")
+  pack   @map("PACK")
 }
+
+
 
 model Cookie {
-  id               String     @id @default(cuid())
-  name             String     @unique
+  id               String   @id @default(cuid())
+  name             String   @unique
   price            Float
-  shortDescription String?    @db.Text
-  description      String?    @db.Text
-  ingredients      String?    @db.Text
+  shortDescription String?  @db.Text 
+  description      String?  @db.Text   
+  ingredients      String?  @db.Text  
+  visible          Boolean  @default(true)
+  isNew            Boolean  @default(false) @map("new") 
   image            String?
   images           Json?
-  visible          Boolean    @default(true)
-  createdAt        DateTime   @default(now())
-  updatedAt        DateTime   @updatedAt
-  saleItems        SaleItem[]
-  recipes          Recipe[]
-  cost             Float      @default(0)
+  cost             Float    @default(0)
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
 
-  // 👇 Agregamos estas relaciones inversas
-  doughInventories DoughInventory[]
+  recipes          Recipe[]
+  doughInventories DoughInventory[]  
+  saleItems        SaleItem[]
 }
+
 
 model Ingredient {
   id           String   @id @default(cuid())
@@ -134,14 +132,14 @@ model Customer {
 }
 
 model Sale {
-  id             String      @id @default(cuid())
+  id             String   @id @default(cuid())
   total          Float
-  deliveryDay    String      // 👈 aquí agregamos el campo
+  deliveryDay    String
   deliveryMethod String
-  createdAt      DateTime    @default(now())
-  updatedAt      DateTime    @updatedAt
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
 
-  customer   Customer  @relation(fields: [customerId], references: [id])
+  customer   Customer   @relation(fields: [customerId], references: [id])
   customerId String
   items      SaleItem[]
 }
@@ -171,5 +169,3 @@ model User {
   role      String   @default("ADMIN")
   createdAt DateTime @default(now())
 }
-
-

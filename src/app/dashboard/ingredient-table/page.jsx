@@ -20,22 +20,22 @@ export default function IngredientsPage() {
   });
 
   const unitOptions = [
-    { value: "G", label: "Gramos (g)" },
-    { value: "KG", label: "Kilogramos (kg)" },
-    { value: "MG", label: "Miligramos (mg)" },
-    { value: "ML", label: "Mililitros (ml)" },
-    { value: "L", label: "Litros (L)" },
-    { value: "OZ", label: "Onzas (oz)" },
-    { value: "LB", label: "Libras (lb)" },
-    { value: "FLOZ", label: "Onzas líquidas (fl oz)" },
-    { value: "CUP", label: "Tazas (cup)" },
-    { value: "TBSP", label: "Cucharadas (tbsp)" },
-    { value: "TSP", label: "Cucharaditas (tsp)" },
-    { value: "PT", label: "Pintas (pt)" },
-    { value: "QT", label: "Cuartos (qt)" },
-    { value: "GAL", label: "Galones (gal)" },
-    { value: "UNIT", label: "Unidad" },
-    { value: "PACK", label: "Paquete" },
+    { value: "g", label: "Gramos (g)" },
+    { value: "kg", label: "Kilogramos (kg)" },
+    { value: "mg", label: "Miligramos (mg)" },
+    { value: "ml", label: "Mililitros (ml)" },
+    { value: "l", label: "Litros (L)" },
+    { value: "oz", label: "Onzas (oz)" },
+    { value: "lb", label: "Libras (lb)" },
+    { value: "floz", label: "Onzas líquidas (fl oz)" },
+    { value: "cup", label: "Tazas (cup)" },
+    { value: "tbsp", label: "Cucharadas (tbsp)" },
+    { value: "tsp", label: "Cucharaditas (tsp)" },
+    { value: "pt", label: "Pintas (pt)" },
+    { value: "qt", label: "Cuartos (qt)" },
+    { value: "gal", label: "Galones (gal)" },
+    { value: "unidad", label: "Unidad" },
+    { value: "pack", label: "Paquete" },
   ];
 
   // cargar ingredientes

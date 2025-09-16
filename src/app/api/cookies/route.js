@@ -62,6 +62,7 @@ export async function POST(req) {
         uploads.push(`/images/cookies/${filename}`);
       }
     }
+    const isNew = formData.get("new") === "true"; // 👈
 
     const cookie = await prisma.cookie.create({
       data: {
@@ -71,6 +72,7 @@ export async function POST(req) {
         description,
         ingredients,
         visible,
+        isNew,
         image: uploads[0] || null,
         images: uploads,
       },
@@ -108,6 +110,7 @@ export async function PUT(req) {
         description: formData.get("description"),
         ingredients: formData.get("ingredients"),
         visible: formData.get("visible") === "true",
+        isNew: formData.get("isNew") === "true", // 👈 aquí
       };
 
       const files = formData.getAll("images").slice(0, 2);

@@ -29,10 +29,10 @@ export async function POST(req) {
     const newIngredient = await prisma.ingredient.create({
       data: {
         name,
-        unitType,
-        unitQuantity: parseFloat(unitQuantity),
-        price: parseFloat(price),
-        remaining: parseFloat(remaining),
+        unitType: unitType.toLowerCase(), // 👈 normaliza siempre
+        unitQuantity,
+        price,
+        remaining,
       },
     });
 

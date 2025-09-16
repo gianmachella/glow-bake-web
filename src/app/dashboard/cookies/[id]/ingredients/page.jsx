@@ -7,6 +7,8 @@ export default function CookieIngredientsPage({ params }) {
   const [cookie, setCookie] = useState(null);
   const [ingredients, setIngredients] = useState([]);
   const [allIngredients, setAllIngredients] = useState([]);
+  const [allBaseDoughs, setAllBaseDoughs] = useState([]); // 👈 lista de masas base
+  const [selectedBaseDough, setSelectedBaseDough] = useState(""); // 👈 masa seleccionada
   const [newIngredient, setNewIngredient] = useState({
     ingredientId: "",
     quantityUsed: 0,
@@ -22,17 +24,30 @@ export default function CookieIngredientsPage({ params }) {
 
       const ingRes = await fetch("/api/ingredients");
       setAllIngredients(await ingRes.json());
+
+      const doughRes = await fetch("/api/base-doughs"); // 👈 nuevo endpoint
+      setAllBaseDoughs(await doughRes.json());
     }
     fetchData();
   }, [id]);
 
   const handleAdd = async () => {
-    if (!newIngredient.ingredientId || newIngredient.quantityUsed <= 0) return;
+    if (
+      !selectedBaseDough || // 👈 debe haber una masa elegida
+      !newIngredient.ingredientId ||
+      newIngredient.quantityUsed <= 0
+    )
+      return;
+
     const res = await fetch(`/api/cookies/${id}/ingredients`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(newIngredient),
+      body: JSON.stringify({
+        ...newIngredient,
+        baseDoughId: selectedBaseDough, // 👈 se envía junto
+      }),
     });
+
     const data = await res.json();
     setIngredients((prev) => [...prev, data]);
     setNewIngredient({ ingredientId: "", quantityUsed: 0 });
@@ -70,44 +85,65 @@ export default function CookieIngredientsPage({ params }) {
         Ingredientes de {cookie?.name}
       </h1>
 
-      {/* Formulario para agregar */}
-      <div className="flex gap-4 mt-6 items-center">
+      {/* Selección de masa base */}
+      <div className="mt-6">
+        <label className="block text-sm font-medium mb-2">
+          Seleccionar Masa Base
+        </label>
         <select
-          value={newIngredient.ingredientId}
-          onChange={(e) =>
-            setNewIngredient((prev) => ({
-              ...prev,
-              ingredientId: e.target.value,
-            }))
-          }
+          value={selectedBaseDough}
+          onChange={(e) => setSelectedBaseDough(e.target.value)}
           className="border rounded p-2"
         >
-          <option value="">Seleccionar ingrediente</option>
-          {allIngredients.map((ing) => (
-            <option key={ing.id} value={ing.id}>
-              {ing.name} ({ing.unitType})
+          <option value="">-- Elegir masa base --</option>
+          {allBaseDoughs.map((dough) => (
+            <option key={dough.id} value={dough.id}>
+              {dough.name}
             </option>
           ))}
         </select>
-        <input
-          type="number"
-          placeholder="Cantidad usada"
-          value={newIngredient.quantityUsed}
-          onChange={(e) =>
-            setNewIngredient((prev) => ({
-              ...prev,
-              quantityUsed: parseFloat(e.target.value),
-            }))
-          }
-          className="border rounded p-2 w-40"
-        />
-        <button
-          onClick={handleAdd}
-          className="bg-blue-600 text-white px-4 py-2 rounded"
-        >
-          Agregar
-        </button>
       </div>
+
+      {/* Formulario para agregar ingredientes (solo si hay masa base seleccionada) */}
+      {selectedBaseDough && (
+        <div className="flex gap-4 mt-6 items-center">
+          <select
+            value={newIngredient.ingredientId}
+            onChange={(e) =>
+              setNewIngredient((prev) => ({
+                ...prev,
+                ingredientId: e.target.value,
+              }))
+            }
+            className="border rounded p-2"
+          >
+            <option value="">Seleccionar ingrediente</option>
+            {allIngredients.map((ing) => (
+              <option key={ing.id} value={ing.id}>
+                {ing.name} ({ing.unitType})
+              </option>
+            ))}
+          </select>
+          <input
+            type="number"
+            placeholder="Cantidad usada"
+            value={newIngredient.quantityUsed}
+            onChange={(e) =>
+              setNewIngredient((prev) => ({
+                ...prev,
+                quantityUsed: parseFloat(e.target.value),
+              }))
+            }
+            className="border rounded p-2 w-40"
+          />
+          <button
+            onClick={handleAdd}
+            className="bg-blue-600 text-white px-4 py-2 rounded"
+          >
+            Agregar
+          </button>
+        </div>
+      )}
 
       {/* Tabla de ingredientes */}
       <table className="w-full mt-6 border">

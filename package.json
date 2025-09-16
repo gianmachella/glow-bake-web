@@ -10,7 +10,8 @@
     "postinstall": "prisma generate && prisma migrate deploy",
     "seed:prod": "node prisma/seed-prod.js",
     "seed": "node prisma/seed.js",
-    "seed:create-user": "node prisma/seed-create-user.js"
+    "seed:create-user": "node prisma/seed-create-user.js",
+    "seed:add-cookies": "node prisma/seed-cookies.js"
   },
   "dependencies": {
     "@prisma/client": "^6.16.0",

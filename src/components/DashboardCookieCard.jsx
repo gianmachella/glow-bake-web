@@ -13,6 +13,7 @@ export default function DashboardCookieCard({
   onEdit,
   onDelete,
   onToggleVisible,
+  onToggleNew, // 👈 nuevo handler
 }) {
   const controls = useAnimation();
   const [ref, inView] = useInView({ triggerOnce: true });
@@ -31,13 +32,25 @@ export default function DashboardCookieCard({
       className="relative bg-white rounded-xl shadow hover:shadow-lg 
                  transition-transform hover:-translate-y-1 flex flex-col h-full border border-gray-200"
     >
+      {/* Switch Visible (derecha) */}
       <div className="absolute top-3 right-3">
         <span className="mr-2 text-xs text-gray-600">
-          {cookie?.visible ? "Visible" : "hidden"}
+          {cookie?.visible ? "Visible" : "Hidden"}
         </span>
         <ToggleSwitch
           checked={cookie?.visible}
           onChange={(val) => onToggleVisible(cookie.id, val)}
+        />
+      </div>
+
+      {/* Switch New (izquierda) */}
+      <div className="absolute top-3 left-3">
+        <span className="mr-2 text-xs text-pink-600">
+          {cookie?.isNew ? "New" : "Not New"}
+        </span>
+        <ToggleSwitch
+          checked={cookie?.isNew}
+          onChange={(val) => onToggleNew(cookie.id, val)} // 👈 manda update inmediato
         />
       </div>
 

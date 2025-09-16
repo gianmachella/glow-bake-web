@@ -19,6 +19,7 @@ export default function CookiesPage() {
     description: "",
     ingredients: "",
     visible: true,
+    new: false, // 👈 usamos "new" en el estado local
     files: [],
   });
 
@@ -49,6 +50,7 @@ export default function CookiesPage() {
       description: "",
       ingredients: "",
       visible: true,
+      new: false,
       files: [],
     });
     setIsEdit(false);
@@ -64,6 +66,7 @@ export default function CookiesPage() {
       description: cookie.description || "",
       ingredients: cookie.ingredients || "",
       visible: cookie.visible,
+      new: cookie.isNew || false, // 👈 mapeamos desde "isNew"
       files: [],
     });
     setIsEdit(true);
@@ -73,9 +76,15 @@ export default function CookiesPage() {
   const handleAdd = async (e) => {
     e.preventDefault();
     const formData = new FormData();
-    Object.entries(form).forEach(([key, value]) => {
+
+    // ⚡ traducimos "new" → "isNew"
+    const payload = { ...form, isNew: form.new };
+    delete payload.new;
+
+    Object.entries(payload).forEach(([key, value]) => {
       if (key !== "files") formData.append(key, value);
     });
+
     if (form.files?.length > 0) {
       for (let i = 0; i < Math.min(form.files.length, 2); i++) {
         formData.append("images", form.files[i]);
@@ -93,9 +102,15 @@ export default function CookiesPage() {
   const handleEdit = async (e) => {
     e.preventDefault();
     const formData = new FormData();
-    Object.entries(form).forEach(([key, value]) => {
+
+    // ⚡ traducimos "new" → "isNew"
+    const payload = { ...form, isNew: form.new };
+    delete payload.new;
+
+    Object.entries(payload).forEach(([key, value]) => {
       if (key !== "files") formData.append(key, value);
     });
+
     if (form.files?.length > 0) {
       for (let i = 0; i < Math.min(form.files.length, 2); i++) {
         formData.append("images", form.files[i]);
@@ -160,6 +175,19 @@ export default function CookiesPage() {
     }
   };
 
+  const handleToggleNew = async (id, newIsNew) => {
+    const res = await fetch("/api/cookies", {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ id, isNew: newIsNew }),
+    });
+    if (res.ok) {
+      setCookies((prev) =>
+        prev.map((c) => (c.id === id ? { ...c, isNew: newIsNew } : c))
+      );
+    }
+  };
+
   return (
     <div className="p-6 bg-gradient-to-br from-pink-50 via-white to-pink-100 rounded-2xl shadow-lg min-h-screen space-y-10">
       {/* Header */}
@@ -185,6 +213,7 @@ export default function CookiesPage() {
             onEdit={openEditModal}
             onDelete={handleDelete}
             onToggleVisible={handleToggleVisible}
+            onToggleNew={handleToggleNew} // 👈 pasamos handler
           />
         ))}
       </div>
@@ -223,7 +252,7 @@ export default function CookiesPage() {
                 </div>
               </div>
 
-              {/* Form básico */}
+              {/* Form */}
               <form
                 onSubmit={isEdit ? handleEdit : handleAdd}
                 className="space-y-5 text-gray-900"
@@ -323,6 +352,17 @@ export default function CookiesPage() {
                       </div>
                     ))}
                   </div>
+                </div>
+
+                {/* Switch New */}
+                <div className="flex items-center gap-2">
+                  <span className="text-sm text-gray-600">
+                    {form.new ? "New" : "Not New"}
+                  </span>
+                  <ToggleSwitch
+                    checked={form.new}
+                    onChange={(val) => setForm({ ...form, new: val })}
+                  />
                 </div>
 
                 {/* Footer */}
