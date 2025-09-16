@@ -1,4 +1,4 @@
-import prisma from "@/lib/prisma";
+import { prisma } from "@/lib/prisma";
 
 // 📍 GET → listar gastos
 export async function GET() {
