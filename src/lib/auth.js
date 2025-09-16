@@ -1,8 +1,6 @@
 import CredentialsProvider from "next-auth/providers/credentials";
-import NextAuth from "next-auth";
-import { PrismaClient } from "@prisma/client";
 import bcrypt from "bcryptjs";
-import { authOptions } from "@/lib/auth";
+import prisma from "./prisma";
 
 export const authOptions = {
   providers: [
@@ -14,7 +12,7 @@ export const authOptions = {
       },
       async authorize(credentials) {
         try {
-          const user = await PrismaClient.user.findUnique({
+          const user = await prisma.user.findUnique({
             where: { email: credentials.email },
           });
 
@@ -23,15 +21,10 @@ export const authOptions = {
             return null;
           }
 
-          console.log("🔑 Password recibido:", credentials.password);
-          console.log("🔐 Password en DB:", user.password);
-
           const isValid = await bcrypt.compare(
             credentials.password,
             user.password
           );
-
-          console.log("🔎 Resultado compare:", isValid);
 
           if (!isValid) {
             console.log("❌ Password incorrecto");
@@ -60,7 +53,3 @@ export const authOptions = {
   },
   secret: process.env.NEXTAUTH_SECRET,
 };
-
-const handler = NextAuth(authOptions);
-
-export { handler as GET, handler as POST };
