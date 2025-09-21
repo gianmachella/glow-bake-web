@@ -7,69 +7,44 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
-enum Unit {
-  g     @map("G")
-  kg    @map("KG")
-  mg    @map("MG")
-  ml    @map("ML")
-  l     @map("L")
-  oz    @map("OZ")
-  lb    @map("LB")
-  floz  @map("FLOZ")
-  cup   @map("CUP")
-  tbsp  @map("TBSP")
-  tsp   @map("TSP")
-  pt    @map("PT")
-  qt    @map("QT")
-  gal   @map("GAL")
-  unidad @map("UNIT")
-  pack   @map("PACK")
-}
-
-
-
 model Cookie {
-  id               String   @id @default(cuid())
-  name             String   @unique
+  id               String           @id @default(cuid())
+  name             String           @unique
   price            Float
-  shortDescription String?  @db.Text 
-  description      String?  @db.Text   
-  ingredients      String?  @db.Text  
-  visible          Boolean  @default(true)
-  isNew            Boolean  @default(false) @map("new") 
+  shortDescription String?          @db.Text
+  description      String?          @db.Text
+  ingredients      String?          @db.Text
+  visible          Boolean          @default(true)
+  createdAt        DateTime         @default(now())
+  updatedAt        DateTime         @updatedAt
   image            String?
   images           Json?
-  cost             Float    @default(0)
-  createdAt        DateTime @default(now())
-  updatedAt        DateTime @updatedAt
-
+  cost             Float            @default(0)
+  isNew            Boolean          @default(false) @map("new")
+  doughInventories DoughInventory[]
   recipes          Recipe[]
-  doughInventories DoughInventory[]  
   saleItems        SaleItem[]
 }
 
-
 model Ingredient {
-  id           String   @id @default(cuid())
-  name         String
-  unitType     Unit
-  unitQuantity Float // cantidad total del paquete
-  price        Float
-  remaining    Float
-  createdAt    DateTime @default(now())
-  updatedAt    DateTime @updatedAt
-
+  id                   String                @id @default(cuid())
+  name                 String
+  createdAt            DateTime              @default(now())
+  price                Float
+  remaining            Float
+  updatedAt            DateTime              @updatedAt
+  unitQuantity         Float
+  unitType             Unit
   baseDoughIngredients BaseDoughIngredient[]
   recipeIngredients    RecipeIngredient[]
 }
 
 model BaseDough {
-  id        String   @id @default(cuid())
-  name      String
-  totalCost Float    @default(0)
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-
+  id          String                @id @default(cuid())
+  name        String
+  totalCost   Float                 @default(0)
+  createdAt   DateTime              @default(now())
+  updatedAt   DateTime              @updatedAt
   ingredients BaseDoughIngredient[]
   recipes     Recipe[]
 }
@@ -77,45 +52,53 @@ model BaseDough {
 model DoughInventory {
   id        String   @id @default(cuid())
   cookieId  String
-  cookie    Cookie   @relation(fields: [cookieId], references: [id])
   quantity  Int
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
+  cookie    Cookie   @relation(fields: [cookieId], references: [id])
+
+  @@index([cookieId], map: "DoughInventory_cookieId_fkey")
 }
 
 model BaseDoughIngredient {
-  id           String @id @default(cuid())
+  id           String     @id @default(cuid())
   baseDoughId  String
   ingredientId String
   quantityUsed Float
   cost         Float
+  baseDough    BaseDough  @relation(fields: [baseDoughId], references: [id])
+  ingredient   Ingredient @relation(fields: [ingredientId], references: [id])
 
-  baseDough  BaseDough  @relation(fields: [baseDoughId], references: [id])
-  ingredient Ingredient @relation(fields: [ingredientId], references: [id])
+  @@index([baseDoughId], map: "BaseDoughIngredient_baseDoughId_fkey")
+  @@index([ingredientId], map: "BaseDoughIngredient_ingredientId_fkey")
 }
 
 model Recipe {
-  id          String   @id @default(cuid())
+  id          String             @id @default(cuid())
   cookieId    String
   baseDoughId String
-  totalCost   Float    @default(0)
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
-
+  createdAt   DateTime           @default(now())
+  totalCost   Float              @default(0)
+  updatedAt   DateTime           @updatedAt
   baseDough   BaseDough          @relation(fields: [baseDoughId], references: [id])
   cookie      Cookie             @relation(fields: [cookieId], references: [id])
   ingredients RecipeIngredient[]
+
+  @@index([baseDoughId], map: "Recipe_baseDoughId_fkey")
+  @@index([cookieId], map: "Recipe_cookieId_fkey")
 }
 
 model RecipeIngredient {
-  id           String @id @default(cuid())
+  id           String     @id @default(cuid())
   recipeId     String
   ingredientId String
   quantityUsed Float
   cost         Float
+  ingredient   Ingredient @relation(fields: [ingredientId], references: [id])
+  recipe       Recipe     @relation(fields: [recipeId], references: [id])
 
-  recipe     Recipe     @relation(fields: [recipeId], references: [id])
-  ingredient Ingredient @relation(fields: [ingredientId], references: [id])
+  @@index([ingredientId], map: "RecipeIngredient_ingredientId_fkey")
+  @@index([recipeId], map: "RecipeIngredient_recipeId_fkey")
 }
 
 model Customer {
@@ -127,39 +110,42 @@ model Customer {
   address   String?
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
-
-  sales Sale[]
+  sales     Sale[]
 }
 
 model Sale {
-  id             String   @id @default(cuid())
+  id             String     @id @default(cuid())
+  customerId     String
   total          Float
+  createdAt      DateTime   @default(now())
   deliveryDay    String
   deliveryMethod String
-  createdAt      DateTime @default(now())
-  updatedAt      DateTime @updatedAt
+  updatedAt      DateTime   @updatedAt
+  customer       Customer   @relation(fields: [customerId], references: [id])
+  items          SaleItem[]
 
-  customer   Customer   @relation(fields: [customerId], references: [id])
-  customerId String
-  items      SaleItem[]
+  @@index([customerId], map: "Sale_customerId_fkey")
 }
 
 model SaleItem {
   id       String @id @default(cuid())
-  sale     Sale   @relation(fields: [saleId], references: [id])
   saleId   String
-  cookie   Cookie @relation(fields: [cookieId], references: [id])
   cookieId String
   quantity Int
-  price    Float // precio unitario histórico en el momento de la venta
+  price    Float
+  cookie   Cookie @relation(fields: [cookieId], references: [id])
+  sale     Sale   @relation(fields: [saleId], references: [id])
+
+  @@index([cookieId], map: "SaleItem_cookieId_fkey")
+  @@index([saleId], map: "SaleItem_saleId_fkey")
 }
 
 model Expense {
   id          String   @id @default(cuid())
   description String
   amount      Float
-  category    String? // opcional para clasificar gastos
   createdAt   DateTime @default(now())
+  category    String?
 }
 
 model User {
@@ -168,4 +154,23 @@ model User {
   password  String
   role      String   @default("ADMIN")
   createdAt DateTime @default(now())
+}
+
+enum Unit {
+  g      @map("G")
+  kg     @map("KG")
+  mg     @map("MG")
+  ml     @map("ML")
+  l      @map("L")
+  oz     @map("OZ")
+  lb     @map("LB")
+  floz   @map("FLOZ")
+  cup    @map("CUP")
+  tbsp   @map("TBSP")
+  tsp    @map("TSP")
+  pt     @map("PT")
+  qt     @map("QT")
+  gal    @map("GAL")
+  unidad @map("UNIT")
+  pack   @map("PACK")
 }
