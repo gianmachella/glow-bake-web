@@ -134,7 +134,7 @@ export const cookies = [
     shortDescription: "Chewy cookie with crushed Oreos and white chocolate.",
     description:
       "Soft and chewy with the perfect balance of crushed Oreos and creamy white chocolate chips. Cookies & cream reimagined for those who crave both crunch and smooth sweetness.",
-    new: true,
+
     ingredients:
       "Flour, sugar, butter, eggs, corn starch, salt, baking soda, baking powder, vanilla extract, chocolate, oreos.",
   },
@@ -147,8 +147,24 @@ export const cookies = [
     shortDescription: "Chewy cookie packed with colorful M&Ms.",
     description:
       "Inspired by my son Luca’s favorite treat! A soft, chewy cookie loaded with colorful M&Ms that burst with joy in every bite. Fun, playful, and made with love.",
-    new: true,
+
     ingredients:
       "Flour, sugar, butter, eggs, corn starch, salt, baking soda, baking powder, vanilla extract, chocolate, M&M.",
+  },
+  {
+    id: "12",
+    name: "Lemon Pie Cookie",
+    price: 7,
+    image: "/images/cookies/lemonPie.png",
+    images: [
+      "/images/cookies/lemonPie.png",
+      "/images/cookies/lemonPie-cut.png",
+    ],
+    shortDescription: "Lemon pie vibes in every soft, zesty bite.",
+    description:
+      "Our Lemon Pie Cookie is sweet, citrusy, and buttery soft. Inspired by the classic dessert, it’s the perfect mix of tangy and smooth — all in a cookie.",
+    new: true,
+    ingredients:
+      "Flour, sugar, butter, eggs, corn starch, salt, baking soda, baking powder, vanilla extract, lemon.",
   },
 ];

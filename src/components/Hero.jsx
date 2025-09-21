@@ -68,9 +68,27 @@ export default function Hero() {
   const [isMobile, setIsMobile] = useState(false);
 
   useEffect(() => {
-    const shown = localStorage.getItem("welcomeModalShown");
+    // Modal Farmers Market (solo imagen)
+    const farmersMarketShown = localStorage.getItem("farmersMarketModalShown");
+    if (!farmersMarketShown) {
+      Swal.fire({
+        html: `
+        <img src="/images/famersmarket.png" 
+             alt="Farmers Market" 
+             style="width: 100%; height: auto; border-radius: 10px;" />
+      `,
+        confirmButtonText: "Close",
+        width: 350,
+        padding: "0",
+        showCloseButton: true,
+        backdrop: true,
+      });
+      localStorage.setItem("farmersMarketModalShown", "true");
+    }
 
-    if (!shown) {
+    // Modal Welcome (texto de recordatorio)
+    const welcomeShown = localStorage.getItem("welcomeModalShown");
+    if (!welcomeShown) {
       Swal.fire({
         title:
           '<img src="/images/banners/Glow Bake.png" alt="Glow Bake Logo" style="max-width: 200px; margin-bottom: 1rem;" />',
@@ -88,7 +106,6 @@ export default function Hero() {
         padding: "1.5rem",
         showCloseButton: true,
       });
-
       localStorage.setItem("welcomeModalShown", "true");
     }
   }, []);
