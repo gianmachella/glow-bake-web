@@ -16,7 +16,6 @@ export const authOptions = {
           return null;
         }
 
-        // Normalizar email
         const email = credentials.email.trim().toLowerCase();
         const plainPassword = credentials.password;
 
@@ -35,20 +34,20 @@ export const authOptions = {
           }
 
           const isValid = await bcrypt.compare(plainPassword, user.password);
-          console.log("🔑 Password válida?", isValid);
+          console.log("🔑 ¿Password válida?", isValid);
 
           if (!isValid) {
             console.log("❌ Password incorrecto para:", email);
             return null;
           }
 
-          console.log("✅ Login correcto para:", user.email);
+          console.log("✅ Login correcto para", user.email);
 
           return {
             id: user.id,
             email: user.email,
             role: user.role,
-            name: user.email, // 👈 importante para NextAuth
+            name: user.email, // ⚠️ Necesario para evitar bug con NextAuth
           };
         } catch (err) {
           console.error("🔥 Error en authorize:", err);
@@ -66,20 +65,25 @@ export const authOptions = {
   callbacks: {
     async jwt({ token, user }) {
       if (user) {
+        console.log("👉 Callback JWT recibió user:", user);
         token.id = user.id;
         token.role = user.role;
         token.email = user.email;
       }
+      console.log("🔑 Token final:", token);
       return token;
     },
     async session({ session, token }) {
+      console.log("👉 Callback SESSION recibió token:", token);
       session.user = {
         id: token.id,
         email: token.email,
         role: token.role,
       };
+      console.log("✅ Session final:", session);
       return session;
     },
   },
+
   secret: process.env.NEXTAUTH_SECRET,
 };
