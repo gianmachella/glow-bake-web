@@ -54,25 +54,25 @@ export default function DoughInventoryPage() {
   };
 
   return (
-    <div className="p-8 min-h-screen bg-gradient-to-br from-yellow-50 via-white to-yellow-100">
+    <div className="p-8 min-h-screen bg-gradient-to-br from-pink-50 via-white to-pink-100">
       {/* Header */}
       <div className="flex justify-between items-center mb-8">
-        <h1 className="text-4xl font-extrabold text-yellow-700">
+        <h1 className="text-4xl font-extrabold text-pink-700">
           Inventario de Masas
         </h1>
         <button
           onClick={openModal}
-          className="bg-yellow-500 hover:bg-yellow-600 text-white px-5 py-2.5 rounded-xl shadow-md font-medium transition"
+          className="bg-pink-500 hover:bg-pink-600 text-white px-5 py-2.5 rounded-xl shadow-md font-medium transition"
         >
           + Registrar Masa
         </button>
       </div>
 
       {/* Tabla */}
-      <div className="overflow-x-auto bg-white/90 rounded-2xl shadow-lg border border-yellow-100">
+      <div className="overflow-x-auto bg-white/90 rounded-2xl shadow-lg border border-pink-100">
         <table className="w-full text-sm text-gray-800">
           <thead>
-            <tr className="bg-gradient-to-r from-yellow-100 to-yellow-200 text-left font-semibold text-yellow-700">
+            <tr className="bg-gradient-to-r from-pink-100 to-pink-200 text-left font-semibold text-pink-700">
               <th className="p-4">Cookie</th>
               <th className="p-4">Cantidad de masas</th>
               <th className="p-4">Galletas disponibles</th>
@@ -89,7 +89,7 @@ export default function DoughInventoryPage() {
                   animate={{ opacity: 1, y: 0 }}
                   transition={{ delay: idx * 0.05 }}
                   className={`transition ${
-                    isLow ? "bg-red-50/70" : "hover:bg-yellow-50/70"
+                    isLow ? "bg-red-50/70" : "hover:bg-pink-50/70"
                   }`}
                 >
                   <td className="p-4 border-b border-gray-100">
@@ -131,7 +131,7 @@ export default function DoughInventoryPage() {
               transition={{ duration: 0.3 }}
               className="bg-white rounded-2xl shadow-xl p-8 w-full max-w-md"
             >
-              <h2 className="text-2xl font-bold mb-6 text-yellow-700">
+              <h2 className="text-2xl font-bold mb-6 text-pink-700">
                 Registrar Masa Nueva
               </h2>
               <form onSubmit={handleSubmit} className="space-y-4 text-gray-900">
@@ -159,7 +159,7 @@ export default function DoughInventoryPage() {
                     onChange={(e) =>
                       setForm({ ...form, quantity: e.target.value })
                     }
-                    className="w-full p-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-yellow-400 outline-none"
+                    className="w-full p-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-pink-400 outline-none"
                     required
                   />
                   <p className="text-xs text-gray-500 mt-1">
@@ -177,7 +177,7 @@ export default function DoughInventoryPage() {
                   </button>
                   <button
                     type="submit"
-                    className="px-5 py-2 bg-yellow-500 text-white rounded-lg shadow hover:bg-yellow-600"
+                    className="px-5 py-2 bg-pink-500 text-white rounded-lg shadow hover:bg-pink-600"
                   >
                     Guardar
                   </button>
