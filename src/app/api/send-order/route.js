@@ -1,6 +1,6 @@
 // app/api/send-order/route.js
 import { Resend } from "resend";
-import { prisma } from "@/lib/prisma";
+import prisma from "@/lib/prisma";
 
 export async function POST(req) {
   try {

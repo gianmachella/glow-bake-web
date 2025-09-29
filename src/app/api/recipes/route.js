@@ -1,4 +1,4 @@
-import { prisma } from "@/lib/prisma";
+import prisma from "@/lib/prisma";
 
 // Conversión de unidades a una base (gramos o mililitros)
 function convertQuantity(value, fromUnit, toUnit) {

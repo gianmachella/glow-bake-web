@@ -1,4 +1,4 @@
-import { prisma } from "../src/lib/prisma.js";
+import prisma from "../src/lib/prisma.js";
 
 console.log("Modelos disponibles en Prisma:");
 console.log(Object.keys(prisma));

@@ -1,4 +1,4 @@
-import { prisma } from "@/lib/prisma";
+import prisma from "@/lib/prisma";
 
 // 📍 GET → listar todas las masas en inventario
 export async function GET() {

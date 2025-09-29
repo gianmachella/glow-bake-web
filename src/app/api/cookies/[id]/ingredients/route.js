@@ -1,4 +1,4 @@
-import { prisma } from "@/lib/prisma";
+import prisma from "@/lib/prisma";
 
 // 🔧 recalcula costo total de la cookie según sus recetas
 async function recalcCookieCost(cookieId) {

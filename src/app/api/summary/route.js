@@ -1,4 +1,4 @@
-import { prisma } from "@/lib/prisma";
+import prisma from "@/lib/prisma"; // 👈 default export correcto
 
 export async function GET() {
   try {

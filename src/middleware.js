@@ -1,24 +1,23 @@
-// src/middleware.ts (o raíz según tu estructura)
-import { withAuth } from "next-auth/middleware";
+import { NextResponse } from "next/server";
+import { jwtVerify } from "jose";
 
-export default withAuth(
-  function middleware(req) {
-    console.log("Middleware corriendo en:", req.nextUrl.pathname);
-  },
-  {
-    callbacks: {
-      // 👇 Aquí está la clave: si no hay token => no entra
-      authorized: ({ token }) => {
-        if (!token) return false;
-        return true;
-      },
-    },
-    pages: {
-      signIn: "/login", // Redirección si no hay sesión
-    },
+export async function middleware(req) {
+  const token = req.cookies.get("auth_token")?.value;
+
+  if (!token) {
+    return NextResponse.redirect(new URL("/login", req.url));
   }
-);
+
+  try {
+    const secret = new TextEncoder().encode(process.env.JWT_SECRET);
+    await jwtVerify(token, secret); // ✅ funciona en Edge
+    return NextResponse.next();
+  } catch (err) {
+    console.error("🔥 Token inválido:", err);
+    return NextResponse.redirect(new URL("/login", req.url));
+  }
+}
 
 export const config = {
-  matcher: ["/dashboard/:path*"], // protege dashboard y subrutas
+  matcher: ["/dashboard/:path*"],
 };

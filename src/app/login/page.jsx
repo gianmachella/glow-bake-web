@@ -3,7 +3,6 @@
 import { Eye, EyeOff, Lock, Mail } from "lucide-react";
 
 import { motion } from "framer-motion";
-import { signIn } from "next-auth/react";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 
@@ -17,17 +16,19 @@ export default function LoginPage() {
     e.preventDefault();
     setError("");
 
-    const res = await signIn("credentials", {
-      redirect: false,
-      email: form.email,
-      password: form.password,
-      callbackUrl: "/dashboard",
+    const res = await fetch("/api/login", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(form),
+      credentials: "include",
     });
 
-    if (res.error) {
-      setError("⚠️ Invalid credentials");
-    } else {
+    const data = await res.json();
+
+    if (res.ok && data.success) {
       router.push("/dashboard");
+    } else {
+      setError(data.error || "⚠️ Invalid credentials");
     }
   };
 
@@ -40,7 +41,6 @@ export default function LoginPage() {
         transition={{ duration: 0.6, ease: "easeOut" }}
         className="bg-white shadow-xl rounded-2xl p-8 w-full max-w-sm space-y-6 border border-pink-100"
       >
-        {/* Header */}
         <motion.h1
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
@@ -61,7 +61,6 @@ export default function LoginPage() {
           </motion.p>
         )}
 
-        {/* Email */}
         <div className="relative">
           <Mail
             className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500"
@@ -77,7 +76,6 @@ export default function LoginPage() {
           />
         </div>
 
-        {/* Password */}
         <div className="relative">
           <Lock
             className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500"
@@ -100,7 +98,6 @@ export default function LoginPage() {
           </button>
         </div>
 
-        {/* Submit */}
         <motion.button
           type="submit"
           whileTap={{ scale: 0.95 }}
@@ -109,7 +106,6 @@ export default function LoginPage() {
           Sign in
         </motion.button>
 
-        {/* Footer */}
         <p className="text-xs text-center text-gray-500">
           © {new Date().getFullYear()} Glow Bake — All rights reserved
         </p>

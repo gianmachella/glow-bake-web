@@ -1,7 +1,7 @@
 import { Buffer } from "buffer";
 import fs from "fs";
 import path from "path";
-import { prisma } from "@/lib/prisma";
+import prisma from "@/lib/prisma";
 
 const uploadDir = path.join(process.cwd(), "public", "images", "cookies");
 
