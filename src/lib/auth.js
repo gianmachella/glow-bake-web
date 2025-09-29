@@ -34,6 +34,7 @@ export const authOptions = {
             credentials.password,
             user.password
           );
+
           console.log("🔑 Password válida?", isValid);
 
           if (!isValid) {
@@ -43,10 +44,12 @@ export const authOptions = {
 
           console.log("✅ Login correcto para", user.email);
 
+          // 👇 devolvemos todo lo que necesitan los callbacks
           return {
             id: user.id,
             email: user.email,
             role: user.role,
+            name: user.email, // NextAuth a veces requiere este campo
           };
         } catch (err) {
           console.error("🔥 Error en authorize:", err);
@@ -66,20 +69,18 @@ export const authOptions = {
       if (user) {
         token.id = user.id;
         token.role = user.role;
+        token.email = user.email;
       }
       return token;
     },
     async session({ session, token }) {
-      return {
-        ...session,
-        user: {
-          ...session.user,
-          id: token.id,
-          role: token.role,
-        },
+      session.user = {
+        id: token.id,
+        email: token.email,
+        role: token.role,
       };
+      return session;
     },
   },
-
   secret: process.env.NEXTAUTH_SECRET,
 };
