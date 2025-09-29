@@ -11,6 +11,8 @@ export const authOptions = {
         password: { label: "Password", type: "password" },
       },
       async authorize(credentials) {
+        console.log("👉 Credentials recibidas:", credentials);
+
         if (!credentials?.email || !credentials?.password) {
           console.log("❌ Faltan credenciales");
           return null;
@@ -21,6 +23,8 @@ export const authOptions = {
             where: { email: credentials.email },
           });
 
+          console.log("🔍 Usuario en DB:", user);
+
           if (!user) {
             console.log("❌ Usuario no encontrado");
             return null;
@@ -30,6 +34,7 @@ export const authOptions = {
             credentials.password,
             user.password
           );
+          console.log("🔑 Password válida?", isValid);
 
           if (!isValid) {
             console.log("❌ Password incorrecto");
