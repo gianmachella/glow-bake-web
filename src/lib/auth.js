@@ -11,45 +11,44 @@ export const authOptions = {
         password: { label: "Password", type: "password" },
       },
       async authorize(credentials) {
-        console.log("👉 Credentials recibidas:", credentials);
-
         if (!credentials?.email || !credentials?.password) {
-          console.log("❌ Faltan credenciales");
+          console.log("❌ Faltan credenciales:", credentials);
           return null;
         }
 
+        // Normalizar email
+        const email = credentials.email.trim().toLowerCase();
+        const plainPassword = credentials.password;
+
+        console.log("👉 Intento de login con:", { email, plainPassword });
+
         try {
           const user = await prisma.user.findUnique({
-            where: { email: credentials.email },
+            where: { email },
           });
 
-          console.log("🔍 Usuario en DB:", user);
+          console.log("🔍 Usuario encontrado en DB:", user);
 
           if (!user) {
-            console.log("❌ Usuario no encontrado");
+            console.log("❌ Usuario no encontrado:", email);
             return null;
           }
 
-          const isValid = await bcrypt.compare(
-            credentials.password,
-            user.password
-          );
-
+          const isValid = await bcrypt.compare(plainPassword, user.password);
           console.log("🔑 Password válida?", isValid);
 
           if (!isValid) {
-            console.log("❌ Password incorrecto");
+            console.log("❌ Password incorrecto para:", email);
             return null;
           }
 
-          console.log("✅ Login correcto para", user.email);
+          console.log("✅ Login correcto para:", user.email);
 
-          // 👇 devolvemos todo lo que necesitan los callbacks
           return {
             id: user.id,
             email: user.email,
             role: user.role,
-            name: user.email, // NextAuth a veces requiere este campo
+            name: user.email, // 👈 importante para NextAuth
           };
         } catch (err) {
           console.error("🔥 Error en authorize:", err);
