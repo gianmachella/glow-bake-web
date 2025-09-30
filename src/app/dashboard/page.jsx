@@ -16,11 +16,12 @@ import { motion } from "framer-motion";
 export default function Dashboard() {
   const [summary, setSummary] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [filter, setFilter] = useState("weekly"); // 👈 default
 
   useEffect(() => {
     async function fetchSummary() {
       try {
-        const res = await fetch("/api/summary");
+        const res = await fetch(`/api/summary?range=${filter}`);
         if (!res.ok) throw new Error("Error fetching summary");
         const data = await res.json();
         setSummary(data);
@@ -31,7 +32,7 @@ export default function Dashboard() {
       }
     }
     fetchSummary();
-  }, []);
+  }, [filter]); // 👈 cambia cuando filtro cambia
 
   if (loading) {
     return (
@@ -51,7 +52,6 @@ export default function Dashboard() {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-pink-50 via-white to-pink-100 p-10 rounded-3xl shadow-inner">
-      {/* Título */}
       <motion.h1
         initial={{ opacity: 0, y: -10 }}
         animate={{ opacity: 1, y: 0 }}
@@ -61,51 +61,58 @@ export default function Dashboard() {
         Dashboard Glow Bake ✨
       </motion.h1>
 
+      {/* Botones de filtro */}
+      <div className="flex justify-center gap-4 mb-10">
+        {["weekly", "monthly", "yearly"].map((f) => (
+          <button
+            key={f}
+            onClick={() => {
+              setLoading(true);
+              setFilter(f);
+            }}
+            className={`px-6 py-2 rounded-lg font-medium shadow-md transition ${
+              filter === f
+                ? "bg-pink-600 text-white"
+                : "bg-gray-200 text-gray-700 hover:bg-gray-300"
+            }`}
+          >
+            {f === "weekly" && "Semanal"}
+            {f === "monthly" && "Mensual"}
+            {f === "yearly" && "Anual"}
+          </button>
+        ))}
+      </div>
+
       {/* KPIs */}
       <div className="grid grid-cols-1 md:grid-cols-4 gap-8 mb-12">
-        <motion.div
-          whileHover={{ scale: 1.05 }}
-          className="bg-gradient-to-br from-pink-100 to-pink-200 p-6 rounded-2xl shadow-lg"
-        >
+        <motion.div className="bg-gradient-to-br from-pink-100 to-pink-200 p-6 rounded-2xl shadow-lg">
           <h2 className="text-lg font-semibold text-gray-700">
             Ventas Totales
           </h2>
           <p className="text-3xl font-bold text-gray-900 mt-2">
-            ${summary.totalRevenue.toFixed(2)}
+            ${(summary.totalRevenue || 0).toFixed(2)}
           </p>
         </motion.div>
-
-        <motion.div
-          whileHover={{ scale: 1.05 }}
-          className="bg-gradient-to-br from-teal-100 to-teal-200 p-6 rounded-2xl shadow-lg"
-        >
+        <motion.div className="bg-gradient-to-br from-teal-100 to-teal-200 p-6 rounded-2xl shadow-lg">
           <h2 className="text-lg font-semibold text-gray-700">Órdenes</h2>
           <p className="text-3xl font-bold text-gray-900 mt-2">
-            {summary.totalOrders}
+            {summary.totalOrders || 0}
           </p>
         </motion.div>
-
-        <motion.div
-          whileHover={{ scale: 1.05 }}
-          className="bg-gradient-to-br from-yellow-100 to-yellow-200 p-6 rounded-2xl shadow-lg"
-        >
+        <motion.div className="bg-gradient-to-br from-yellow-100 to-yellow-200 p-6 rounded-2xl shadow-lg">
           <h2 className="text-lg font-semibold text-gray-700">Gastos</h2>
           <p className="text-3xl font-bold text-gray-900 mt-2">
-            ${summary.expenses.toFixed(2)}
+            ${(summary.expenses || 0).toFixed(2)}
           </p>
         </motion.div>
-
-        <motion.div
-          whileHover={{ scale: 1.05 }}
-          className="bg-gradient-to-br from-green-100 to-green-200 p-6 rounded-2xl shadow-lg"
-        >
+        <motion.div className="bg-gradient-to-br from-green-100 to-green-200 p-6 rounded-2xl shadow-lg">
           <h2 className="text-lg font-semibold text-gray-700">Ganancia Neta</h2>
           <p
             className={`text-3xl font-bold mt-2 ${
-              summary.netProfit < 0 ? "text-red-600" : "text-green-700"
+              (summary.netProfit || 0) < 0 ? "text-red-600" : "text-green-700"
             }`}
           >
-            ${summary.netProfit.toFixed(2)}
+            ${(summary.netProfit || 0).toFixed(2)}
           </p>
         </motion.div>
       </div>
@@ -118,7 +125,7 @@ export default function Dashboard() {
         className="bg-white/90 backdrop-blur-sm p-8 rounded-3xl shadow-xl"
       >
         <h2 className="text-2xl font-bold text-gray-800 mb-6 text-center">
-          Galletas más vendidas 🍪
+          Galletas más vendidas 🍪 ({filter})
         </h2>
 
         {summary.topCookies.length === 0 ? (
@@ -127,7 +134,6 @@ export default function Dashboard() {
           </p>
         ) : (
           <>
-            {/* Lista */}
             <ul className="space-y-3 mb-8">
               {summary.topCookies.map((cookie) => (
                 <li
@@ -138,14 +144,13 @@ export default function Dashboard() {
                   <span className="text-sm text-gray-600">
                     {cookie.totalSold} uds —{" "}
                     <span className="font-semibold text-pink-600">
-                      ${cookie.totalRevenue.toFixed(2)}
+                      ${(cookie.totalRevenue || 0).toFixed(2)}
                     </span>
                   </span>
                 </li>
               ))}
             </ul>
 
-            {/* Gráfico */}
             <div className="w-full h-80">
               <ResponsiveContainer>
                 <BarChart data={summary.topCookies}>
@@ -162,7 +167,7 @@ export default function Dashboard() {
                     formatter={(value, name) =>
                       name === "totalSold"
                         ? [`${value} uds`, "Cantidad"]
-                        : [`$${value.toFixed(2)}`, "Ingresos"]
+                        : [`$${(value || 0).toFixed(2)}`, "Ingresos"]
                     }
                   />
                   <Bar

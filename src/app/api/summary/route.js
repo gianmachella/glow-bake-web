@@ -1,22 +1,51 @@
-import prisma from "@/lib/prisma"; // 👈 default export correcto
+import prisma from "@/lib/prisma";
 
-export async function GET() {
+export async function GET(req) {
   try {
-    // Ventas totales
+    const { searchParams } = new URL(req.url);
+    const range = searchParams.get("range") || "all";
+
+    const now = new Date();
+    let start, end;
+
+    if (range === "weekly") {
+      // Semana actual: desde sábado anterior hasta viernes
+      const day = now.getDay(); // 0=Dom, 6=Sáb
+      const diffToSaturday = (day + 1) % 7;
+      start = new Date(now);
+      start.setDate(now.getDate() - diffToSaturday);
+      start.setHours(0, 0, 0, 0);
+
+      end = new Date(start);
+      end.setDate(start.getDate() + 6);
+      end.setHours(23, 59, 59, 999);
+    } else if (range === "monthly") {
+      start = new Date(now.getFullYear(), now.getMonth(), 1);
+      end = new Date(now.getFullYear(), now.getMonth() + 1, 0, 23, 59, 59, 999);
+    } else if (range === "yearly") {
+      start = new Date(now.getFullYear(), 0, 1);
+      end = new Date(now.getFullYear(), 11, 31, 23, 59, 59, 999);
+    } else {
+      start = new Date(2000, 0, 1); // todo
+      end = new Date(2100, 0, 1);
+    }
+
+    // 📊 Ventas totales
     const totalSales = await prisma.sale.aggregate({
+      where: { createdAt: { gte: start, lte: end } },
       _sum: { total: true },
       _count: true,
     });
 
-    // Galletas más vendidas (basado en SaleItem)
+    // 📊 Top galletas
     const topCookies = await prisma.saleItem.groupBy({
       by: ["cookieId"],
+      where: { sale: { createdAt: { gte: start, lte: end } } },
       _sum: { quantity: true, price: true },
       orderBy: { _sum: { quantity: "desc" } },
       take: 5,
     });
 
-    // Buscar info de cada galleta
     const cookiesData = await Promise.all(
       topCookies.map(async (item) => {
         const cookie = await prisma.cookie.findUnique({
@@ -31,20 +60,9 @@ export async function GET() {
       })
     );
 
-    // Gastos extras
-    const expenses = await prisma.expense.aggregate({
-      _sum: { amount: true },
-    });
-
-    // Ganancias netas (ventas – gastos)
-    const netProfit =
-      (totalSales._sum.total ?? 0) - (expenses._sum.amount ?? 0);
-
     const summary = {
       totalRevenue: totalSales._sum.total ?? 0,
       totalOrders: totalSales._count,
-      expenses: expenses._sum.amount ?? 0,
-      netProfit,
       topCookies: cookiesData,
     };
 
@@ -54,7 +72,7 @@ export async function GET() {
     });
   } catch (error) {
     console.error("❌ Error generating summary:", error);
-    return new Response(JSON.stringify({ error: "Error generating summary" }), {
+    return new Response(JSON.stringify({ error: error.message }), {
       status: 500,
       headers: { "Content-Type": "application/json" },
     });
