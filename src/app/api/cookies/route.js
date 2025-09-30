@@ -1,9 +1,22 @@
 import { Buffer } from "buffer";
-import fs from "fs";
-import path from "path";
 import prisma from "@/lib/prisma";
+import { supabase } from "@/lib/supabase";
 
-const uploadDir = path.join(process.cwd(), "public", "images", "cookies");
+async function uploadToSupabase(file) {
+  const buffer = Buffer.from(await file.arrayBuffer());
+  const filename = `${Date.now()}-${file.name}`;
+  const { error } = await supabase.storage
+    .from("cookies")
+    .upload(filename, buffer, {
+      contentType: file.type,
+      upsert: true,
+    });
+
+  if (error) throw error;
+
+  const { data } = supabase.storage.from("cookies").getPublicUrl(filename);
+  return data.publicUrl;
+}
 
 async function recalcCookieCost(cookieId) {
   const recipes = await prisma.recipe.findMany({
@@ -12,7 +25,6 @@ async function recalcCookieCost(cookieId) {
   });
 
   if (!recipes.length) return 0;
-
   return recipes.reduce((acc, r) => acc + r.totalCost, 0);
 }
 
@@ -20,7 +32,7 @@ async function recalcCookieCost(cookieId) {
 export async function GET() {
   try {
     const cookies = await prisma.cookie.findMany({
-      where: { visible: true }, // 👈 solo cookies visibles
+      where: { visible: true },
       include: {
         recipes: { include: { baseDough: true, ingredients: true } },
       },
@@ -48,21 +60,16 @@ export async function POST(req) {
     const description = formData.get("description");
     const ingredients = formData.get("ingredients");
     const visible = formData.get("visible") === "true";
+    const isNew = formData.get("isNew") === "true";
 
     const files = formData.getAll("images").slice(0, 2);
     const uploads = [];
-
-    if (!fs.existsSync(uploadDir)) fs.mkdirSync(uploadDir, { recursive: true });
-
     for (const file of files) {
       if (file && typeof file === "object") {
-        const buffer = Buffer.from(await file.arrayBuffer());
-        const filename = `${Date.now()}-${file.name}`;
-        fs.writeFileSync(path.join(uploadDir, filename), buffer);
-        uploads.push(`/images/cookies/${filename}`);
+        const url = await uploadToSupabase(file);
+        uploads.push(url);
       }
     }
-    const isNew = formData.get("new") === "true"; // 👈
 
     const cookie = await prisma.cookie.create({
       data: {
@@ -100,9 +107,12 @@ export async function POST(req) {
 export async function PUT(req) {
   try {
     const contentType = req.headers.get("content-type") || "";
+
+    // 🔄 Caso multipart (con imágenes nuevas)
     if (contentType.includes("multipart/form-data")) {
       const formData = await req.formData();
       const id = formData.get("id");
+
       const updates = {
         name: formData.get("name"),
         price: parseFloat(formData.get("price")),
@@ -110,20 +120,15 @@ export async function PUT(req) {
         description: formData.get("description"),
         ingredients: formData.get("ingredients"),
         visible: formData.get("visible") === "true",
-        isNew: formData.get("isNew") === "true", // 👈 aquí
+        isNew: formData.get("isNew") === "true",
       };
 
       const files = formData.getAll("images").slice(0, 2);
       const uploads = [];
-      if (!fs.existsSync(uploadDir))
-        fs.mkdirSync(uploadDir, { recursive: true });
-
       for (const file of files) {
         if (file && typeof file === "object") {
-          const buffer = Buffer.from(await file.arrayBuffer());
-          const filename = `${Date.now()}-${file.name}`;
-          fs.writeFileSync(path.join(uploadDir, filename), buffer);
-          uploads.push(`/images/cookies/${filename}`);
+          const url = await uploadToSupabase(file);
+          uploads.push(url);
         }
       }
 
@@ -148,9 +153,11 @@ export async function PUT(req) {
       });
     }
 
+    // 🔄 Caso JSON (solo toggle visible, isNew, etc.)
     const body = await req.json();
     const { id, ...rest } = body;
     const cookie = await prisma.cookie.update({ where: { id }, data: rest });
+
     const cost = await recalcCookieCost(cookie.id);
     const updated = await prisma.cookie.update({
       where: { id: cookie.id },
@@ -169,30 +176,25 @@ export async function PUT(req) {
   }
 }
 
-// 📍 DELETE con opción soft/hard
+// 📍 DELETE (soft/hard)
 export async function DELETE(req) {
   try {
     const { id, soft } = await req.json();
-    if (!id)
+    if (!id) {
       return new Response(JSON.stringify({ error: "Missing id" }), {
         status: 400,
       });
+    }
 
     if (soft) {
       const updated = await prisma.cookie.update({
         where: { id },
         data: { visible: false },
       });
-      return new Response(JSON.stringify(updated), {
-        status: 200,
-        headers: { "Content-Type": "application/json" },
-      });
+      return new Response(JSON.stringify(updated), { status: 200 });
     } else {
       await prisma.cookie.delete({ where: { id } });
-      return new Response(JSON.stringify({ success: true }), {
-        status: 200,
-        headers: { "Content-Type": "application/json" },
-      });
+      return new Response(JSON.stringify({ success: true }), { status: 200 });
     }
   } catch (err) {
     console.error("❌ Error eliminando cookie:", err);
