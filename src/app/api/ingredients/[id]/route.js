@@ -58,20 +58,17 @@ export async function PUT(req, context) {
   }
 }
 
-// ✅ DELETE ingredient
-export async function DELETE(req) {
+export async function DELETE(req, { params }) {
   try {
-    const { id } = await req.json();
+    const { id } = params;
 
     await prisma.ingredient.delete({ where: { id } });
+
     return Response.json({ message: "Ingredient deleted" });
   } catch (error) {
     console.error("❌ Error DELETE ingredient:", error);
     return new Response(
-      JSON.stringify({
-        error: "Error deleting ingredient",
-        details: error.message,
-      }),
+      JSON.stringify({ error: "Error deleting ingredient" }),
       { status: 500 }
     );
   }

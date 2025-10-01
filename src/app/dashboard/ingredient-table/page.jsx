@@ -117,7 +117,7 @@ export default function IngredientsPage() {
     }
   };
 
-  // 🔧 Cambiar paquetes y actualizar remaining al mismo tiempo
+  // Cambiar paquetes y actualizar remaining
   const handlePackagesChange = async (id, action) => {
     const ingredient = ingredients.find((i) => i.id === id);
     if (!ingredient) return;
@@ -173,6 +173,13 @@ export default function IngredientsPage() {
     document.body.removeChild(link);
   };
 
+  const getBarColor = (percent) => {
+    if (percent > 50) return "bg-green-500";
+    if (percent > 35) return "bg-yellow-400";
+    if (percent > 20) return "bg-yellow-500";
+    return "bg-red-500";
+  };
+
   return (
     <div className="p-8 min-h-screen bg-gradient-to-br from-pink-50 via-white to-pink-100">
       {/* Header */}
@@ -205,22 +212,24 @@ export default function IngredientsPage() {
               <th className="p-4">Contenido</th>
               <th className="p-4">Precio</th>
               <th className="p-4">Restante</th>
+              <th className="p-4">Nivel</th> {/* Nueva columna */}
               <th className="p-4">Paquetes</th>
               <th className="p-4 text-center">Acciones</th>
             </tr>
           </thead>
           <tbody>
             {ingredients.map((ing, idx) => {
-              const percent = (ing.remaining / ing.unitQuantity) * 100;
+              const percent = Math.min(
+                (ing.remaining / ing.unitQuantity) * 100,
+                100
+              );
               return (
                 <motion.tr
                   key={ing.id}
                   initial={{ opacity: 0, y: 10 }}
                   animate={{ opacity: 1, y: 0 }}
                   transition={{ delay: idx * 0.05 }}
-                  className={`hover:bg-pink-50/70 transition ${
-                    percent < 20 ? "bg-red-50" : ""
-                  }`}
+                  className="hover:bg-pink-50/70 transition"
                 >
                   <td className="p-4 border-b border-gray-100">{ing.name}</td>
                   <td className="p-4 border-b border-gray-100">
@@ -229,14 +238,30 @@ export default function IngredientsPage() {
                   <td className="p-4 border-b border-gray-100 font-medium text-gray-700">
                     ${ing.price.toFixed(2)}
                   </td>
-                  <td className="p-4 border-b border-gray-100 flex items-center gap-2">
+                  <td className="p-4 border-b border-gray-100">
                     {ing.remaining} {ing.unitType}
-                    {percent < 20 && (
-                      <span className="px-2 py-0.5 text-xs rounded-full bg-red-100 text-red-600 font-medium">
-                        Bajo stock
+                  </td>
+                  {/* Barra de nivel */}
+                  <td className="p-4 border-b border-gray-100">
+                    {percent <= 0 ? (
+                      <span className="text-red-600 font-semibold">
+                        Out of Stock
                       </span>
+                    ) : (
+                      <>
+                        <div className="w-full bg-gray-200 rounded-full h-3 overflow-hidden">
+                          <div
+                            className={`${getBarColor(percent)} h-3`}
+                            style={{ width: `${percent}%` }}
+                          />
+                        </div>
+                        <span className="text-xs text-gray-600">
+                          {percent.toFixed(0)}%
+                        </span>
+                      </>
                     )}
                   </td>
+
                   <td className="p-4 border-b border-gray-100 text-center">
                     <div className="flex items-center gap-2 justify-center">
                       <button

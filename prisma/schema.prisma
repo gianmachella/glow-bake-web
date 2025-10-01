@@ -8,22 +8,23 @@ datasource db {
 }
 
 model Cookie {
-  id               String           @id @default(cuid())
-  name             String           @unique
-  price            Float
-  shortDescription String?          @db.Text
-  description      String?          @db.Text
-  ingredients      String?          @db.Text
-  visible          Boolean          @default(true)
-  createdAt        DateTime         @default(now())
-  updatedAt        DateTime         @updatedAt
-  image            String?
-  images           Json?
-  cost             Float            @default(0)
-  isNew            Boolean          @default(false) @map("new")
-  doughInventories DoughInventory[]
-  recipes          Recipe[]
-  saleItems        SaleItem[]
+  id                String             @id @default(cuid())
+  name              String             @unique
+  price             Float
+  shortDescription  String?            @db.Text
+  description       String?            @db.Text
+  ingredients       String?            @db.Text // 👈 este lo puedes mantener por ahora si quieres texto libre
+  visible           Boolean            @default(true)
+  createdAt         DateTime           @default(now())
+  updatedAt         DateTime           @updatedAt
+  image             String?
+  images            Json?
+  cost              Float              @default(0)
+  isNew             Boolean            @default(false) @map("new")
+  doughInventories  DoughInventory[]
+  recipes           Recipe[]
+  saleItems         SaleItem[]
+  cookieIngredients CookieIngredient[] // 👈 NUEVO
 }
 
 model Ingredient {
@@ -38,6 +39,7 @@ model Ingredient {
   packages            Int                   @default(1)
   recipeIngredients   RecipeIngredient[]
   BaseDoughIngredient BaseDoughIngredient[]
+  cookieIngredients   CookieIngredient[]
 }
 
 model BaseDough {
@@ -72,6 +74,21 @@ model BaseDoughIngredient {
 
   @@index([baseDoughId], map: "BaseDoughIngredient_baseDoughId_fkey")
   @@index([ingredientId], map: "BaseDoughIngredient_ingredientId_fkey")
+}
+
+model CookieIngredient {
+  id           String @id @default(cuid())
+  cookieId     String
+  ingredientId String
+  quantityUsed Float
+  cost         Float
+  unit         String
+
+  cookie     Cookie     @relation(fields: [cookieId], references: [id])
+  ingredient Ingredient @relation(fields: [ingredientId], references: [id])
+
+  @@index([cookieId], map: "CookieIngredient_cookieId_fkey")
+  @@index([ingredientId], map: "CookieIngredient_ingredientId_fkey")
 }
 
 model Recipe {

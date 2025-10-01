@@ -1,17 +1,17 @@
+import { NextResponse } from "next/server";
 import prisma from "@/lib/prisma";
 
-// 📍 GET → listar todas las masas en inventario
+// 📍 GET → listar todo el inventario
 export async function GET() {
   try {
-    const doughs = await prisma.doughInventory.findMany({
+    const inventory = await prisma.doughInventory.findMany({
       include: { cookie: true },
       orderBy: { createdAt: "desc" },
     });
-
-    return Response.json(doughs);
+    return NextResponse.json(inventory);
   } catch (err) {
     console.error("❌ Error GET dough-inventory:", err);
-    return new Response("Error fetching dough inventory", { status: 500 });
+    return new Response("Error fetching inventory", { status: 500 });
   }
 }
 
@@ -36,7 +36,7 @@ export async function POST(req) {
       include: { cookie: true },
     });
 
-    return Response.json(dough, { status: 201 });
+    return NextResponse.json(dough, { status: 201 });
   } catch (err) {
     console.error("❌ Error POST dough-inventory:", err);
     return new Response("Error creating dough inventory", { status: 500 });
@@ -66,7 +66,7 @@ export async function PUT(req) {
       include: { cookie: true },
     });
 
-    return Response.json(updated);
+    return NextResponse.json(updated);
   } catch (err) {
     console.error("❌ Error PUT dough-inventory:", err);
     return new Response("Error updating dough inventory", { status: 500 });

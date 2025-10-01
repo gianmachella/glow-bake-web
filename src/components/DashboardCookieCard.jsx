@@ -1,9 +1,9 @@
 "use client";
 
 import { motion, useAnimation } from "framer-motion";
+import { useEffect, useState } from "react";
 
 import ToggleSwitch from "@/components/ToggleSwitch";
-import { useEffect } from "react";
 import { useInView } from "react-intersection-observer";
 import { useRouter } from "next/navigation";
 
@@ -13,15 +13,29 @@ export default function DashboardCookieCard({
   onEdit,
   onDelete,
   onToggleVisible,
-  onToggleNew, // 👈 nuevo handler
+  onToggleNew,
 }) {
   const controls = useAnimation();
   const [ref, inView] = useInView({ triggerOnce: true });
   const router = useRouter();
+  const [costData, setCostData] = useState(null);
 
   useEffect(() => {
     if (inView) controls.start({ opacity: 1, y: 0 });
   }, [inView, controls]);
+
+  useEffect(() => {
+    async function fetchCost() {
+      const res = await fetch(`/api/cookies/${cookie.id}/costs`);
+      if (res.ok) {
+        setCostData(await res.json());
+      }
+    }
+    if (cookie?.id) fetchCost();
+  }, [cookie?.id]);
+
+  const costo = costData ? costData.cost.toFixed(2) : "0.00";
+  const ganancia = costData ? costData.profit.toFixed(2) : "0.00";
 
   return (
     <motion.div
@@ -32,7 +46,7 @@ export default function DashboardCookieCard({
       className="relative bg-white rounded-xl shadow hover:shadow-lg 
                  transition-transform hover:-translate-y-1 flex flex-col h-full border border-gray-200"
     >
-      {/* Switch Visible (derecha) */}
+      {/* Switch Visible */}
       <div className="absolute top-3 right-3">
         <span className="mr-2 text-xs text-gray-600">
           {cookie?.visible ? "Visible" : "Hidden"}
@@ -43,14 +57,14 @@ export default function DashboardCookieCard({
         />
       </div>
 
-      {/* Switch New (izquierda) */}
+      {/* Switch New */}
       <div className="absolute top-3 left-3">
         <span className="mr-2 text-xs text-pink-600">
           {cookie?.isNew ? "New" : "Not New"}
         </span>
         <ToggleSwitch
           checked={cookie?.isNew}
-          onChange={(val) => onToggleNew(cookie.id, val)} // 👈 manda update inmediato
+          onChange={(val) => onToggleNew(cookie.id, val)}
         />
       </div>
 
@@ -80,12 +94,19 @@ export default function DashboardCookieCard({
         <p className="text-xs text-gray-500 italic line-clamp-2 mt-1">
           {cookie.shortDescription || cookie.description}
         </p>
-        <p className="text-gray-800 font-semibold text-sm mt-2">
-          ${cookie.price.toFixed(2)} USD
-        </p>
+
+        {/* 💵 Info financiera */}
+        <div className="mt-3 text-sm space-y-1">
+          <p className="text-gray-800 font-semibold">
+            Precio: ${cookie.price.toFixed(2)}
+          </p>
+          <p className="text-gray-700 text-xs mt-1">
+            Costo: ${costo} – Ganancia: ${ganancia}
+          </p>
+        </div>
       </div>
 
-      {/* Botones de acción */}
+      {/* Botones */}
       <div className="flex justify-between gap-2 p-3 border-t border-gray-100">
         <button
           onClick={() =>

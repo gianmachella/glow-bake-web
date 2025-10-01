@@ -10,6 +10,7 @@ export default function ExpensesPage() {
     id: null,
     description: "",
     amount: "",
+    type: "Fijo",
   });
 
   // cargar gastos
@@ -27,7 +28,7 @@ export default function ExpensesPage() {
   };
 
   const openAddModal = () => {
-    setForm({ id: null, description: "", amount: "" });
+    setForm({ id: null, description: "", amount: "", type: "Fijo" });
     setIsEdit(false);
     setIsOpen(true);
   };
@@ -95,6 +96,7 @@ export default function ExpensesPage() {
             <tr className="bg-pink-100 text-left font-semibold">
               <th className="p-3 border-b">Descripción</th>
               <th className="p-3 border-b">Monto</th>
+              <th className="p-3 border-b">Tipo</th>
               <th className="p-3 border-b">Fecha</th>
               <th className="p-3 border-b"></th>
             </tr>
@@ -104,7 +106,12 @@ export default function ExpensesPage() {
               <tr key={e.id} className="hover:bg-pink-50">
                 <td className="p-3 border-b">{e.description}</td>
                 <td className="p-3 border-b font-semibold text-pink-600">
-                  ${e.amount.toFixed(2)}
+                  ${Number(e.amount).toFixed(2)}
+                </td>
+                <td className="p-3 border-b">
+                  <span className="px-2 py-1 bg-pink-100 rounded-lg text-xs text-pink-700 font-medium">
+                    {e.type}
+                  </span>
                 </td>
                 <td className="p-3 border-b">
                   {new Date(e.createdAt).toLocaleDateString()}
@@ -112,13 +119,13 @@ export default function ExpensesPage() {
                 <td className="p-3 border-b flex gap-2">
                   <button
                     onClick={() => openEditModal(e)}
-                    className="px-2 py-1 bg-blue-500 text-white rounded hover:bg-blue-600"
+                    className="px-2 py-1 bg-blue-500 text-white rounded hover:bg-blue-600 text-xs"
                   >
                     Editar
                   </button>
                   <button
                     onClick={() => handleDelete(e.id)}
-                    className="px-2 py-1 bg-red-500 text-white rounded hover:bg-red-600"
+                    className="px-2 py-1 bg-red-500 text-white rounded hover:bg-red-600 text-xs"
                   >
                     Eliminar
                   </button>
@@ -133,7 +140,7 @@ export default function ExpensesPage() {
       {isOpen && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
           <div className="bg-white p-6 rounded-2xl shadow w-full max-w-md">
-            <h2 className="text-xl font-bold mb-4">
+            <h2 className="text-xl text-black font-bold mb-4">
               {isEdit ? "Editar Gasto" : "Agregar Gasto"}
             </h2>
             <form onSubmit={handleSubmit} className="space-y-3">
@@ -143,7 +150,7 @@ export default function ExpensesPage() {
                 placeholder="Descripción"
                 value={form.description}
                 onChange={handleChange}
-                className="w-full p-2 border rounded"
+                className="w-full p-2 border rounded text-gray-800 placeholder-gray-400"
                 required
               />
               <input
@@ -153,11 +160,24 @@ export default function ExpensesPage() {
                 placeholder="Monto"
                 value={form.amount}
                 onChange={handleChange}
-                className="w-full p-2 border rounded"
+                className="w-full p-2 border rounded text-gray-800 placeholder-gray-400"
                 required
               />
+              <select
+                name="category"
+                value={form.category}
+                onChange={handleChange}
+                className="w-full text-black p-2 border rounded"
+                required
+              >
+                <option value="">Selecciona categoría</option>
+                <option value="operativo">Operativo</option>
+                <option value="marketing">Marketing</option>
+                <option value="infraestructura">Infraestructura</option>
+                <option value="per-cookie">Per-Cookie</option>
+              </select>
 
-              <div className="flex justify-end gap-3">
+              <div className="flex justify-end gap-3 pt-2">
                 <button
                   type="button"
                   onClick={() => setIsOpen(false)}

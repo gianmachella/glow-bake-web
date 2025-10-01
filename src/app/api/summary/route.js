@@ -1,80 +1,120 @@
+import { NextResponse } from "next/server";
 import prisma from "@/lib/prisma";
 
 export async function GET(req) {
   try {
     const { searchParams } = new URL(req.url);
-    const range = searchParams.get("range") || "all";
+    const range = searchParams.get("range") || "weekly";
 
-    const now = new Date();
-    let start, end;
-
+    let startDate = new Date();
     if (range === "weekly") {
-      // Semana actual: desde sábado anterior hasta viernes
-      const day = now.getDay(); // 0=Dom, 6=Sáb
-      const diffToSaturday = (day + 1) % 7;
-      start = new Date(now);
-      start.setDate(now.getDate() - diffToSaturday);
-      start.setHours(0, 0, 0, 0);
-
-      end = new Date(start);
-      end.setDate(start.getDate() + 6);
-      end.setHours(23, 59, 59, 999);
+      startDate.setDate(startDate.getDate() - 7);
     } else if (range === "monthly") {
-      start = new Date(now.getFullYear(), now.getMonth(), 1);
-      end = new Date(now.getFullYear(), now.getMonth() + 1, 0, 23, 59, 59, 999);
+      startDate.setMonth(startDate.getMonth() - 1);
     } else if (range === "yearly") {
-      start = new Date(now.getFullYear(), 0, 1);
-      end = new Date(now.getFullYear(), 11, 31, 23, 59, 59, 999);
-    } else {
-      start = new Date(2000, 0, 1); // todo
-      end = new Date(2100, 0, 1);
+      startDate.setFullYear(startDate.getFullYear() - 1);
     }
 
-    // 📊 Ventas totales
-    const totalSales = await prisma.sale.aggregate({
-      where: { createdAt: { gte: start, lte: end } },
-      _sum: { total: true },
-      _count: true,
+    // 🔹 Ventas
+    const sales = await prisma.sale.findMany({
+      where: { createdAt: { gte: startDate } },
+      include: {
+        items: {
+          include: {
+            cookie: {
+              include: {
+                recipes: { include: { baseDough: true, ingredients: true } },
+              },
+            },
+          },
+        },
+      },
     });
 
-    // 📊 Top galletas
-    const topCookies = await prisma.saleItem.groupBy({
-      by: ["cookieId"],
-      where: { sale: { createdAt: { gte: start, lte: end } } },
-      _sum: { quantity: true, price: true },
-      orderBy: { _sum: { quantity: "desc" } },
-      take: 5,
-    });
+    const totalRevenue = sales.reduce((acc, sale) => acc + sale.total, 0);
+    const totalOrders = sales.length;
 
-    const cookiesData = await Promise.all(
-      topCookies.map(async (item) => {
-        const cookie = await prisma.cookie.findUnique({
-          where: { id: item.cookieId },
+    // 🔹 Calcular costo real de cada galleta vendida
+    let totalCookieCosts = 0;
+
+    for (const sale of sales) {
+      for (const item of sale.items) {
+        const cookie = item.cookie;
+        if (!cookie) continue;
+
+        // costo de masa base ÷ 8
+        let cost = 0;
+        cookie.recipes.forEach((recipe) => {
+          cost += (recipe.baseDough?.totalCost || 0) / 8;
+          recipe.ingredients.forEach((ing) => {
+            cost += ing.cost || 0;
+          });
         });
-        return {
-          cookieId: item.cookieId,
-          name: cookie?.name ?? "Desconocida",
-          totalSold: item._sum.quantity ?? 0,
-          totalRevenue: (item._sum.quantity ?? 0) * (cookie?.price ?? 0),
-        };
-      })
+
+        // gastos per-cookie
+        const perCookieExpenses = await prisma.expense.findMany({
+          where: { category: "per-cookie" },
+        });
+        const perCookieExtra = perCookieExpenses.reduce(
+          (acc, e) => acc + (e.amount || 0),
+          0
+        );
+
+        cost += perCookieExtra;
+
+        totalCookieCosts += cost * item.quantity;
+      }
+    }
+
+    // 🔹 Gastos generales
+    const generalExpenses = await prisma.expense.findMany({
+      where: {
+        createdAt: { gte: startDate },
+        NOT: { category: "per-cookie" },
+      },
+    });
+    const generalTotal = generalExpenses.reduce(
+      (acc, e) => acc + (e.amount || 0),
+      0
     );
 
-    const summary = {
-      totalRevenue: totalSales._sum.total ?? 0,
-      totalOrders: totalSales._count,
-      topCookies: cookiesData,
-    };
+    // 🔹 Totales
+    const expenses = totalCookieCosts + generalTotal;
+    const netProfit = totalRevenue - expenses;
 
-    return new Response(JSON.stringify(summary), {
-      status: 200,
-      headers: { "Content-Type": "application/json" },
+    // 🔹 Top cookies
+    const cookieMap = {};
+    sales.forEach((sale) => {
+      sale.items.forEach((item) => {
+        if (!cookieMap[item.cookieId]) {
+          cookieMap[item.cookieId] = {
+            cookieId: item.cookieId,
+            name: item.cookie?.name,
+            totalSold: 0,
+            totalRevenue: 0,
+          };
+        }
+        cookieMap[item.cookieId].totalSold += item.quantity;
+        cookieMap[item.cookieId].totalRevenue += item.price * item.quantity;
+      });
+    });
+
+    const topCookies = Object.values(cookieMap).sort(
+      (a, b) => b.totalSold - a.totalSold
+    );
+
+    return NextResponse.json({
+      totalRevenue,
+      totalOrders,
+      expenses,
+      netProfit,
+      topCookies,
     });
   } catch (error) {
-    console.error("❌ Error generating summary:", error);
-    return new Response(JSON.stringify({ error: error.message }), {
-      status: 500,
-      headers: { "Content-Type": "application/json" },
-    });
+    console.error("❌ Error summary:", error);
+    return NextResponse.json(
+      { error: "Internal server error" },
+      { status: 500 }
+    );
   }
 }

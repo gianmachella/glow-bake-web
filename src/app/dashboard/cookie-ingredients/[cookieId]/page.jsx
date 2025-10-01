@@ -10,12 +10,13 @@ export default function CookieIngredientsPage() {
   const [cookie, setCookie] = useState(null);
   const [ingredients, setIngredients] = useState([]);
   const [baseDoughs, setBaseDoughs] = useState([]);
-  const [selectedBaseDough, setSelectedBaseDough] = useState(""); // 👈 masa base elegida
+  const [selectedBaseDough, setSelectedBaseDough] = useState("");
 
   const [selected, setSelected] = useState("");
   const [qty, setQty] = useState("");
   const [unit, setUnit] = useState("");
 
+  // 🔄 cargar datos
   useEffect(() => {
     async function fetchData() {
       const res = await fetch(`/api/cookies/${cookieId}`);
@@ -25,12 +26,19 @@ export default function CookieIngredientsPage() {
       const ingRes = await fetch("/api/ingredients");
       setIngredients(await ingRes.json());
 
-      const doughRes = await fetch("/api/base-doughs"); // 👈 nuevo endpoint
-      setBaseDoughs(await doughRes.json());
+      const doughRes = await fetch("/api/base-doughs");
+      const doughData = await doughRes.json();
+      setBaseDoughs(doughData);
+
+      // 👇 si la cookie ya tiene una receta, preseleccionamos la masa base
+      if (data?.recipes?.length > 0) {
+        setSelectedBaseDough(data.recipes[0].baseDoughId);
+      }
     }
     fetchData();
   }, [cookieId]);
 
+  // ➕ agregar ingrediente
   const handleAddIngredient = async (e) => {
     e.preventDefault();
     if (!selectedBaseDough)
@@ -40,18 +48,42 @@ export default function CookieIngredientsPage() {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
-        baseDoughId: selectedBaseDough, // 👈 se envía con cada ingrediente
+        baseDoughId: selectedBaseDough,
         ingredientId: selected,
-        quantityUsed: qty,
+        quantityUsed: parseFloat(qty),
         unit,
       }),
     });
 
     if (res.ok) {
-      setCookie(await res.json()); // cookie con ingredientes actualizados
+      const cookieRes = await fetch(`/api/cookies/${cookieId}`);
+      const updatedCookie = await cookieRes.json();
+      setCookie(updatedCookie);
+
       setSelected("");
       setQty("");
       setUnit("");
+    } else {
+      const err = await res.json().catch(() => ({}));
+      alert(`Error: ${err.error || "No se pudo agregar ingrediente"}`);
+    }
+  };
+
+  // ❌ eliminar ingrediente
+  const handleDeleteIngredient = async (ingredientId) => {
+    const res = await fetch(
+      `/api/cookies/${cookieId}/ingredients/${ingredientId}`,
+      {
+        method: "DELETE",
+      }
+    );
+
+    if (res.ok) {
+      const cookieRes = await fetch(`/api/cookies/${cookieId}`);
+      setCookie(await cookieRes.json());
+    } else {
+      const err = await res.json().catch(() => ({}));
+      alert(`Error: ${err.error || "No se pudo eliminar ingrediente"}`);
     }
   };
 
@@ -77,27 +109,41 @@ export default function CookieIngredientsPage() {
         />
       </div>
 
-      {/* Lista de ingredientes */}
-      <ul className="space-y-3">
-        {cookie?.recipes?.flatMap((r) =>
-          r.ingredients.map((ri) => (
-            <li
-              key={ri.id}
-              className="flex justify-between items-center bg-white px-4 py-3 rounded-xl shadow-sm border border-pink-100 hover:shadow-md transition"
-            >
-              <span className="font-medium text-gray-800">
-                {ri.ingredient.name} – {ri.quantityUsed}{" "}
-                {ri.ingredient.unitType}
-              </span>
-              <button className="px-3 py-1 bg-red-500 text-white rounded-lg text-sm hover:bg-red-600 shadow">
-                Eliminar
-              </button>
-            </li>
-          ))
-        )}
-      </ul>
+      {/* Mostrar masa base y sus ingredientes */}
+      <div className="space-y-6">
+        {cookie?.recipes?.map((recipe) => (
+          <div
+            key={recipe.id}
+            className="bg-white p-6 rounded-2xl shadow border border-pink-100"
+          >
+            <h2 className="text-lg font-bold text-pink-600 mb-3">
+              Masa base: {recipe.baseDough?.name}
+            </h2>
 
-      {/* Formulario para agregar (solo si hay masa base seleccionada) */}
+            <ul className="space-y-2">
+              {recipe.ingredients.map((ri) => (
+                <li
+                  key={ri.id}
+                  className="flex justify-between items-center bg-pink-50 px-4 py-2 rounded-lg shadow-sm border border-pink-100"
+                >
+                  <span className="font-medium text-gray-800">
+                    {ri.ingredient.name} – {ri.quantityUsed}{" "}
+                    {ri.ingredient.unitType}
+                  </span>
+                  <button
+                    onClick={() => handleDeleteIngredient(ri.id)}
+                    className="px-3 py-1 bg-red-500 text-white rounded-lg text-sm hover:bg-red-600 shadow"
+                  >
+                    Eliminar
+                  </button>
+                </li>
+              ))}
+            </ul>
+          </div>
+        ))}
+      </div>
+
+      {/* Formulario para agregar ingrediente */}
       {selectedBaseDough && (
         <form
           onSubmit={handleAddIngredient}

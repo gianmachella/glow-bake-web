@@ -19,11 +19,19 @@ export default function DoughsPage() {
 
   useEffect(() => {
     async function fetchData() {
-      const doughRes = await fetch("/api/doughs");
-      setDoughs(await doughRes.json());
+      try {
+        const doughRes = await fetch("/api/base-doughs");
+        const doughJson = await doughRes.json().catch(() => []);
+        setDoughs(Array.isArray(doughJson) ? doughJson : []);
 
-      const ingRes = await fetch("/api/ingredients");
-      setAllIngredients(await ingRes.json());
+        const ingRes = await fetch("/api/ingredients");
+        const ingJson = await ingRes.json().catch(() => []);
+        setAllIngredients(Array.isArray(ingJson) ? ingJson : []);
+      } catch (err) {
+        console.error("❌ Error fetchData:", err);
+        setDoughs([]);
+        setAllIngredients([]);
+      }
     }
     fetchData();
   }, []);
@@ -53,7 +61,7 @@ export default function DoughsPage() {
     const method = isEdit ? "PUT" : "POST";
 
     try {
-      const res = await fetch("/api/doughs", {
+      const res = await fetch("/api/base-doughs", {
         method,
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(form),
@@ -109,7 +117,7 @@ export default function DoughsPage() {
 
     if (result.isConfirmed) {
       try {
-        const res = await fetch("/api/doughs", {
+        const res = await fetch("/api/base-doughs", {
           method: "DELETE",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ id }),
@@ -184,46 +192,55 @@ export default function DoughsPage() {
             </tr>
           </thead>
           <tbody>
-            {doughs.map((d, idx) => (
-              <motion.tr
-                key={d.id}
-                initial={{ opacity: 0, y: 10 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: idx * 0.05 }}
-                className="hover:bg-pink-50/70 transition"
-              >
-                <td className="p-4 border-b border-gray-100 font-medium text-gray-900">
-                  {d.name}
+            {Array.isArray(doughs) && doughs.length > 0 ? (
+              doughs.map((d, idx) => (
+                <motion.tr
+                  key={d.id}
+                  initial={{ opacity: 0, y: 10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay: idx * 0.05 }}
+                  className="hover:bg-pink-50/70 transition"
+                >
+                  <td className="p-4 border-b border-gray-100 font-medium text-gray-900">
+                    {d.name}
+                  </td>
+                  <td className="p-4 border-b border-gray-100">
+                    <ul className="list-disc pl-4 space-y-1">
+                      {d.ingredients?.map((ing) => (
+                        <li key={ing.id}>
+                          {ing.ingredient.name} – {ing.quantityUsed}{" "}
+                          {ing.ingredient.unitType} (${ing.cost.toFixed(2)})
+                        </li>
+                      ))}
+                    </ul>
+                  </td>
+
+                  <td className="p-4 border-b border-gray-100 font-semibold text-pink-600">
+                    ${d.totalCost.toFixed(2)}
+                  </td>
+                  <td className="p-4 border-b border-gray-100 flex gap-3 justify-center">
+                    <button
+                      onClick={() => openEditModal(d)}
+                      className="px-3 py-1.5 bg-blue-500 hover:bg-blue-600 text-white rounded-lg text-xs shadow"
+                    >
+                      Editar
+                    </button>
+                    <button
+                      onClick={() => handleDelete(d.id)}
+                      className="px-3 py-1.5 bg-red-500 hover:bg-red-600 text-white rounded-lg text-xs shadow"
+                    >
+                      Eliminar
+                    </button>
+                  </td>
+                </motion.tr>
+              ))
+            ) : (
+              <tr>
+                <td colSpan={4} className="p-6 text-center text-gray-500">
+                  No hay masas creadas todavía
                 </td>
-                <td className="p-4 border-b border-gray-100">
-                  <ul className="list-disc pl-4 space-y-1">
-                    {d.ingredients.map((ing) => (
-                      <li key={ing.id} className="text-gray-700">
-                        {ing.ingredient.name} – {ing.quantityUsed}{" "}
-                        {ing.ingredient.unitType} (${ing.cost.toFixed(2)})
-                      </li>
-                    ))}
-                  </ul>
-                </td>
-                <td className="p-4 border-b border-gray-100 font-semibold text-pink-600">
-                  ${d.totalCost.toFixed(2)}
-                </td>
-                <td className="p-4 border-b border-gray-100 flex gap-3 justify-center">
-                  <button
-                    onClick={() => openEditModal(d)}
-                    className="px-3 py-1.5 bg-blue-500 hover:bg-blue-600 text-white rounded-lg text-xs shadow"
-                  >
-                    Editar
-                  </button>
-                  <button
-                    onClick={() => handleDelete(d.id)}
-                    className="px-3 py-1.5 bg-red-500 hover:bg-red-600 text-white rounded-lg text-xs shadow"
-                  >
-                    Eliminar
-                  </button>
-                </td>
-              </motion.tr>
-            ))}
+              </tr>
+            )}
           </tbody>
         </table>
       </div>
@@ -242,7 +259,7 @@ export default function DoughsPage() {
               animate={{ scale: 1, opacity: 1 }}
               exit={{ scale: 0.9, opacity: 0 }}
               transition={{ duration: 0.3 }}
-              className="bg-white rounded-2xl shadow-xl p-8 w-full max-w-2xl"
+              className="bg-white rounded-2xl shadow-xl p-8 w-full max-w-2xl max-h-[80vh] overflow-y-auto"
             >
               <h2 className="text-2xl font-bold mb-6 text-pink-600">
                 {isEdit ? "Editar Masa" : "Agregar Masa"}
