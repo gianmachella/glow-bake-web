@@ -17,7 +17,7 @@ export default function IngredientsPage() {
     unitQuantity: "",
     price: "",
     remaining: "",
-    packages: 1, // 👈 nuevo campo
+    packages: 1,
   });
 
   const unitOptions = [
@@ -117,14 +117,30 @@ export default function IngredientsPage() {
     }
   };
 
-  const handlePackagesChange = async (id, newValue) => {
+  // 🔧 Cambiar paquetes y actualizar remaining al mismo tiempo
+  const handlePackagesChange = async (id, action) => {
     const ingredient = ingredients.find((i) => i.id === id);
     if (!ingredient) return;
+
+    let newPackages = ingredient.packages;
+    let newRemaining = ingredient.remaining;
+
+    if (action === "add") {
+      newPackages = ingredient.packages + 1;
+      newRemaining = ingredient.remaining + ingredient.unitQuantity;
+    } else if (action === "remove" && ingredient.packages > 0) {
+      newPackages = ingredient.packages - 1;
+      newRemaining = ingredient.remaining - ingredient.unitQuantity;
+    }
 
     const res = await fetch(`/api/ingredients/${id}`, {
       method: "PUT",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ ...ingredient, packages: newValue }),
+      body: JSON.stringify({
+        ...ingredient,
+        packages: newPackages,
+        remaining: newRemaining,
+      }),
     });
 
     if (res.ok) {
@@ -189,7 +205,7 @@ export default function IngredientsPage() {
               <th className="p-4">Contenido</th>
               <th className="p-4">Precio</th>
               <th className="p-4">Restante</th>
-              <th className="p-4">Paquetes</th> {/* 👈 NUEVA COLUMNA */}
+              <th className="p-4">Paquetes</th>
               <th className="p-4 text-center">Acciones</th>
             </tr>
           </thead>
@@ -224,21 +240,14 @@ export default function IngredientsPage() {
                   <td className="p-4 border-b border-gray-100 text-center">
                     <div className="flex items-center gap-2 justify-center">
                       <button
-                        onClick={() =>
-                          handlePackagesChange(
-                            ing.id,
-                            Math.max(ing.packages - 1, 0)
-                          )
-                        }
+                        onClick={() => handlePackagesChange(ing.id, "remove")}
                         className="px-2 py-1 bg-gray-200 rounded-lg hover:bg-gray-300 text-sm"
                       >
                         -
                       </button>
                       <span className="font-semibold">{ing.packages}</span>
                       <button
-                        onClick={() =>
-                          handlePackagesChange(ing.id, ing.packages + 1)
-                        }
+                        onClick={() => handlePackagesChange(ing.id, "add")}
                         className="px-2 py-1 bg-pink-500 text-white rounded-lg hover:bg-pink-600 text-sm"
                       >
                         +

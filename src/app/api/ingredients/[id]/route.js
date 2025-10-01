@@ -1,11 +1,37 @@
 import prisma from "@/lib/prisma";
 
-// ✅ UPDATE ingredient
-export async function PUT(req) {
+export async function PUT(req, context) {
   try {
+    const { id } = await context.params;
     const body = await req.json();
-    const { id, name, unitType, unitQuantity, price, remaining, packages } =
-      body;
+    const {
+      name,
+      unitType,
+      unitQuantity,
+      price,
+      remaining,
+      packages,
+      addPackage,
+      removePackage,
+    } = body;
+
+    // Obtenemos el ingrediente actual
+    const ingredient = await prisma.ingredient.findUnique({ where: { id } });
+
+    let newRemaining = remaining ?? ingredient.remaining;
+    let newPackages = packages ?? ingredient.packages;
+
+    // Si se agrega un paquete
+    if (addPackage) {
+      newPackages = ingredient.packages + 1;
+      newRemaining = ingredient.remaining + ingredient.unitQuantity;
+    }
+
+    // Si se quita un paquete
+    if (removePackage && ingredient.packages > 0) {
+      newPackages = ingredient.packages - 1;
+      newRemaining = ingredient.remaining - ingredient.unitQuantity;
+    }
 
     const updatedIngredient = await prisma.ingredient.update({
       where: { id },
@@ -14,8 +40,8 @@ export async function PUT(req) {
         unitType,
         unitQuantity: parseFloat(unitQuantity),
         price: parseFloat(price),
-        remaining: parseFloat(remaining),
-        packages: parseInt(packages ?? 1),
+        remaining: newRemaining,
+        packages: newPackages,
       },
     });
 
