@@ -1,10 +1,11 @@
 import prisma from "@/lib/prisma";
 
-export async function PUT(req, context) {
+// ✅ UPDATE ingredient
+export async function PUT(req) {
   try {
-    const { id } = await context.params; // 👈 await aquí
     const body = await req.json();
-    const { name, unitType, unitQuantity, price, remaining } = body;
+    const { id, name, unitType, unitQuantity, price, remaining, packages } =
+      body;
 
     const updatedIngredient = await prisma.ingredient.update({
       where: { id },
@@ -14,6 +15,7 @@ export async function PUT(req, context) {
         unitQuantity: parseFloat(unitQuantity),
         price: parseFloat(price),
         remaining: parseFloat(remaining),
+        packages: parseInt(packages ?? 1),
       },
     });
 
@@ -30,14 +32,12 @@ export async function PUT(req, context) {
   }
 }
 
-export async function DELETE(_, context) {
+// ✅ DELETE ingredient
+export async function DELETE(req) {
   try {
-    const { id } = await context.params; // 👈 await aquí también
+    const { id } = await req.json();
 
-    await prisma.ingredient.delete({
-      where: { id },
-    });
-
+    await prisma.ingredient.delete({ where: { id } });
     return Response.json({ message: "Ingredient deleted" });
   } catch (error) {
     console.error("❌ Error DELETE ingredient:", error);

@@ -17,6 +17,7 @@ export default function IngredientsPage() {
     unitQuantity: "",
     price: "",
     remaining: "",
+    packages: 1, // 👈 nuevo campo
   });
 
   const unitOptions = [
@@ -60,6 +61,7 @@ export default function IngredientsPage() {
       unitQuantity: "",
       price: "",
       remaining: "",
+      packages: 1,
     });
     setIsEdit(false);
     setIsOpen(true);
@@ -86,6 +88,7 @@ export default function IngredientsPage() {
         unitQuantity: parseFloat(form.unitQuantity),
         price: parseFloat(form.price),
         remaining: parseFloat(form.remaining),
+        packages: parseInt(form.packages),
       }),
     });
 
@@ -114,16 +117,34 @@ export default function IngredientsPage() {
     }
   };
 
+  const handlePackagesChange = async (id, newValue) => {
+    const ingredient = ingredients.find((i) => i.id === id);
+    if (!ingredient) return;
+
+    const res = await fetch(`/api/ingredients/${id}`, {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ ...ingredient, packages: newValue }),
+    });
+
+    if (res.ok) {
+      const updated = await res.json();
+      setIngredients((prev) =>
+        prev.map((ing) => (ing.id === updated.id ? updated : ing))
+      );
+    }
+  };
+
   const lowStock = ingredients.filter(
     (ing) => (ing.remaining / ing.unitQuantity) * 100 < 20
   );
 
   const exportCSV = () => {
-    const header = "Nombre,Restante,Total,Unidad\n";
+    const header = "Nombre,Restante,Total,Unidad,Paquetes\n";
     const rows = lowStock
       .map(
         (ing) =>
-          `${ing.name},${ing.remaining},${ing.unitQuantity},${ing.unitType}`
+          `${ing.name},${ing.remaining},${ing.unitQuantity},${ing.unitType},${ing.packages || 0}`
       )
       .join("\n");
 
@@ -168,6 +189,7 @@ export default function IngredientsPage() {
               <th className="p-4">Contenido</th>
               <th className="p-4">Precio</th>
               <th className="p-4">Restante</th>
+              <th className="p-4">Paquetes</th> {/* 👈 NUEVA COLUMNA */}
               <th className="p-4 text-center">Acciones</th>
             </tr>
           </thead>
@@ -200,6 +222,30 @@ export default function IngredientsPage() {
                     )}
                   </td>
                   <td className="p-4 border-b border-gray-100 text-center">
+                    <div className="flex items-center gap-2 justify-center">
+                      <button
+                        onClick={() =>
+                          handlePackagesChange(
+                            ing.id,
+                            Math.max(ing.packages - 1, 0)
+                          )
+                        }
+                        className="px-2 py-1 bg-gray-200 rounded-lg hover:bg-gray-300 text-sm"
+                      >
+                        -
+                      </button>
+                      <span className="font-semibold">{ing.packages}</span>
+                      <button
+                        onClick={() =>
+                          handlePackagesChange(ing.id, ing.packages + 1)
+                        }
+                        className="px-2 py-1 bg-pink-500 text-white rounded-lg hover:bg-pink-600 text-sm"
+                      >
+                        +
+                      </button>
+                    </div>
+                  </td>
+                  <td className="p-4 border-b border-gray-100 text-center">
                     <div className="inline-flex gap-2">
                       <button
                         onClick={() => openEditModal(ing)}
@@ -221,6 +267,144 @@ export default function IngredientsPage() {
           </tbody>
         </table>
       </div>
+
+      {/* Modal Crear/Editar Ingrediente */}
+      <AnimatePresence>
+        {isOpen && (
+          <motion.div
+            className="fixed inset-0 bg-black/40 backdrop-blur-sm flex items-center justify-center z-50"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+          >
+            <motion.div
+              initial={{ scale: 0.9, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              exit={{ scale: 0.9, opacity: 0 }}
+              transition={{ duration: 0.3 }}
+              className="bg-white rounded-2xl shadow-xl p-8 w-full max-w-md"
+            >
+              <h2 className="text-2xl font-bold mb-6 text-pink-600">
+                {isEdit ? "Editar Ingrediente" : "Agregar Ingrediente"}
+              </h2>
+              <form onSubmit={handleSubmit} className="space-y-4 text-gray-900">
+                {/* Nombre */}
+                <div>
+                  <label className="block text-sm font-medium mb-1">
+                    Nombre
+                  </label>
+                  <input
+                    type="text"
+                    name="name"
+                    placeholder="Ej: Harina"
+                    value={form.name}
+                    onChange={handleChange}
+                    className="w-full p-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-pink-400 outline-none"
+                    required
+                  />
+                </div>
+
+                {/* Cantidad total */}
+                <div>
+                  <label className="block text-sm font-medium mb-1">
+                    Cantidad total
+                  </label>
+                  <input
+                    type="number"
+                    step="0.01"
+                    name="unitQuantity"
+                    placeholder="Ej: 1000"
+                    value={form.unitQuantity}
+                    onChange={handleChange}
+                    className="w-full p-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-pink-400 outline-none"
+                    required
+                  />
+                </div>
+
+                {/* Unidad */}
+                <div>
+                  <label className="block text-sm font-medium mb-1">
+                    Unidad
+                  </label>
+                  <CustomSelect
+                    options={unitOptions}
+                    value={form.unitType}
+                    onChange={(val) => setForm({ ...form, unitType: val })}
+                    placeholder="Seleccione unidad"
+                  />
+                </div>
+
+                {/* Precio */}
+                <div>
+                  <label className="block text-sm font-medium mb-1">
+                    Precio
+                  </label>
+                  <input
+                    type="number"
+                    step="0.01"
+                    name="price"
+                    placeholder="Ej: 3.50"
+                    value={form.price}
+                    onChange={handleChange}
+                    className="w-full p-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-pink-400 outline-none"
+                    required
+                  />
+                </div>
+
+                {/* Restante */}
+                <div>
+                  <label className="block text-sm font-medium mb-1">
+                    Restante
+                  </label>
+                  <input
+                    type="number"
+                    step="0.01"
+                    name="remaining"
+                    placeholder="Ej: 800"
+                    value={form.remaining}
+                    onChange={handleChange}
+                    className="w-full p-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-pink-400 outline-none"
+                    required
+                  />
+                </div>
+
+                {/* Paquetes (NUEVO) */}
+                <div>
+                  <label className="block text-sm font-medium mb-1">
+                    Paquetes
+                  </label>
+                  <input
+                    type="number"
+                    name="packages"
+                    placeholder="Ej: 3"
+                    value={form.packages}
+                    onChange={handleChange}
+                    className="w-full p-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-pink-400 outline-none"
+                    min="0"
+                  />
+                </div>
+
+                {/* Botones */}
+                <div className="flex justify-end gap-3 pt-4">
+                  <button
+                    type="button"
+                    onClick={() => setIsOpen(false)}
+                    className="px-4 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300"
+                  >
+                    Cancelar
+                  </button>
+                  <button
+                    type="submit"
+                    className="px-5 py-2 bg-pink-500 text-white rounded-lg shadow hover:bg-pink-600"
+                  >
+                    Guardar
+                  </button>
+                </div>
+              </form>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
 
       {/* Modal Lista de Compras */}
       <AnimatePresence>
@@ -253,6 +437,11 @@ export default function IngredientsPage() {
                       <span>{ing.name}</span>
                       <span className="text-sm text-gray-600">
                         {ing.remaining}/{ing.unitQuantity} {ing.unitType}
+                        {ing.packages > 0 && (
+                          <span className="ml-2 text-purple-700 font-medium">
+                            ({ing.packages} paquetes)
+                          </span>
+                        )}
                       </span>
                     </li>
                   ))}
@@ -274,122 +463,6 @@ export default function IngredientsPage() {
                   </button>
                 )}
               </div>
-            </motion.div>
-          </motion.div>
-        )}
-      </AnimatePresence>
-
-      {/* Modal Crear/Editar Ingrediente */}
-      <AnimatePresence>
-        {isOpen && (
-          <motion.div
-            className="fixed inset-0 bg-black/40 backdrop-blur-sm flex items-center justify-center z-50"
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-          >
-            <motion.div
-              initial={{ scale: 0.9, opacity: 0 }}
-              animate={{ scale: 1, opacity: 1 }}
-              exit={{ scale: 0.9, opacity: 0 }}
-              transition={{ duration: 0.3 }}
-              className="bg-white rounded-2xl shadow-xl p-8 w-full max-w-md"
-            >
-              <h2 className="text-2xl font-bold mb-6 text-pink-600">
-                {isEdit ? "Editar Ingrediente" : "Agregar Ingrediente"}
-              </h2>
-              <form onSubmit={handleSubmit} className="space-y-4 text-gray-900">
-                <div>
-                  <label className="block text-sm font-medium mb-1">
-                    Nombre
-                  </label>
-                  <input
-                    type="text"
-                    name="name"
-                    placeholder="Ej: Harina"
-                    value={form.name}
-                    onChange={handleChange}
-                    className="w-full p-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-pink-400 outline-none"
-                    required
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-sm font-medium mb-1">
-                    Cantidad total
-                  </label>
-                  <input
-                    type="number"
-                    step="0.01"
-                    name="unitQuantity"
-                    placeholder="Ej: 1000"
-                    value={form.unitQuantity}
-                    onChange={handleChange}
-                    className="w-full p-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-pink-400 outline-none"
-                    required
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-sm font-medium mb-1">
-                    Unidad
-                  </label>
-                  <CustomSelect
-                    options={unitOptions}
-                    value={form.unitType}
-                    onChange={(val) => setForm({ ...form, unitType: val })}
-                    placeholder="Seleccione unidad"
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-sm font-medium mb-1">
-                    Precio
-                  </label>
-                  <input
-                    type="number"
-                    step="0.01"
-                    name="price"
-                    placeholder="Ej: 3.50"
-                    value={form.price}
-                    onChange={handleChange}
-                    className="w-full p-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-pink-400 outline-none"
-                    required
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-sm font-medium mb-1">
-                    Restante
-                  </label>
-                  <input
-                    type="number"
-                    step="0.01"
-                    name="remaining"
-                    placeholder="Ej: 800"
-                    value={form.remaining}
-                    onChange={handleChange}
-                    className="w-full p-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-pink-400 outline-none"
-                    required
-                  />
-                </div>
-
-                <div className="flex justify-end gap-3 pt-4">
-                  <button
-                    type="button"
-                    onClick={() => setIsOpen(false)}
-                    className="px-4 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300"
-                  >
-                    Cancelar
-                  </button>
-                  <button
-                    type="submit"
-                    className="px-5 py-2 bg-pink-500 text-white rounded-lg shadow hover:bg-pink-600"
-                  >
-                    Guardar
-                  </button>
-                </div>
-              </form>
             </motion.div>
           </motion.div>
         )}

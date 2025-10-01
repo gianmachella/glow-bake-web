@@ -1,38 +1,38 @@
 import prisma from "@/lib/prisma";
 
+// ✅ GET all ingredients
 export async function GET() {
   try {
     const ingredients = await prisma.ingredient.findMany({
       orderBy: { createdAt: "desc" },
     });
-
     return Response.json(ingredients);
   } catch (error) {
     console.error("❌ Error GET ingredients:", error);
-
     return new Response(
       JSON.stringify({
         error: "Error fetching ingredients",
         details: error.message,
-        stack: error.stack, // 👈 agrega esto para debug
       }),
       { status: 500 }
     );
   }
 }
 
+// ✅ CREATE ingredient
 export async function POST(req) {
   try {
     const body = await req.json();
-    const { name, unitType, unitQuantity, price, remaining } = body;
+    const { name, unitType, unitQuantity, price, remaining, packages } = body;
 
     const newIngredient = await prisma.ingredient.create({
       data: {
         name,
-        unitType: unitType.toLowerCase(), // 👈 normaliza siempre
-        unitQuantity,
-        price,
-        remaining,
+        unitType: unitType.toLowerCase(),
+        unitQuantity: parseFloat(unitQuantity),
+        price: parseFloat(price),
+        remaining: parseFloat(remaining),
+        packages: parseInt(packages ?? 1),
       },
     });
 

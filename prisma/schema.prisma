@@ -27,16 +27,17 @@ model Cookie {
 }
 
 model Ingredient {
-  id                   String                @id @default(cuid())
-  name                 String
-  createdAt            DateTime              @default(now())
-  price                Float
-  remaining            Float
-  updatedAt            DateTime              @updatedAt
-  unitQuantity         Float
-  unitType             Unit
-  baseDoughIngredients BaseDoughIngredient[]
-  recipeIngredients    RecipeIngredient[]
+  id                  String                @id @default(cuid())
+  name                String
+  createdAt           DateTime              @default(now())
+  price               Float
+  remaining           Float
+  updatedAt           DateTime              @updatedAt
+  unitQuantity        Float
+  unitType            Unit
+  packages            Int                   @default(1)
+  recipeIngredients   RecipeIngredient[]
+  BaseDoughIngredient BaseDoughIngredient[]
 }
 
 model BaseDough {
