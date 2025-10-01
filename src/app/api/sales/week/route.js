@@ -1,27 +1,35 @@
 import prisma from "@/lib/prisma";
 
-// 👉 Función para calcular el inicio del "sábado" más reciente
 function getWeekRange() {
   const now = new Date();
 
-  // Tomamos el último sábado
-  const day = now.getDay(); // 0=domingo, 6=sábado
-  const diff = (day + 1) % 7; // cuánto retroceder para llegar al sábado
+  const day = now.getDay();
+  let diff = day - 6;
+
+  if (diff < 0) diff += 7;
+
   const startOfWeek = new Date(
     now.getFullYear(),
     now.getMonth(),
-    now.getDate() - diff
+    now.getDate() - diff,
+    9,
+    0,
+    0,
+    0 // 👈 sábado 9:00 AM
   );
-  startOfWeek.setHours(0, 0, 0, 0);
 
-  return { startOfWeek, endOfWeek: now };
+  const endOfWeek = new Date(startOfWeek);
+  endOfWeek.setDate(startOfWeek.getDate() + 7);
+  endOfWeek.setHours(8, 59, 59, 999); // 👈 siguiente sábado 8:59 AM
+
+  return { startOfWeek, endOfWeek };
 }
 
 export async function GET() {
   try {
     const { startOfWeek, endOfWeek } = getWeekRange();
 
-    // Traemos todas las ventas de la semana actual
+    // Traer todas las ventas de la semana Glow Bake
     const sales = await prisma.sale.findMany({
       where: {
         createdAt: {
@@ -30,23 +38,19 @@ export async function GET() {
         },
       },
       include: {
-        items: {
-          include: { cookie: true },
-        },
+        items: { include: { cookie: true } },
       },
       orderBy: { createdAt: "asc" },
     });
 
-    // Agrupamos en Thursday y Friday
+    // 🔹 Resultado inicial con Thursday y Friday vacíos
     const result = {
       Thursday: { totalOrders: 0, totalCookies: 0, cookies: {} },
       Friday: { totalOrders: 0, totalCookies: 0, cookies: {} },
     };
 
     for (const sale of sales) {
-      const dayName = sale.createdAt.toLocaleDateString("en-US", {
-        weekday: "long",
-      });
+      const dayName = sale.deliveryDay; // 👈 Usamos deliveryDay en vez de createdAt
 
       if (dayName === "Thursday" || dayName === "Friday") {
         result[dayName].totalOrders += 1;

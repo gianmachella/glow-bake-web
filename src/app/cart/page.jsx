@@ -28,7 +28,9 @@ export default function CartPage() {
   const [disabledDays, setDisabledDays] = useState({
     Thursday: false,
     Friday: false,
+    Saturday: false,
   });
+
   const [nextAvailableDate, setNextAvailableDate] = useState("");
 
   const total = cartItems.reduce(
@@ -76,24 +78,32 @@ export default function CartPage() {
     });
   };
 
-  // deshabilitar días
   useEffect(() => {
     const now = new Date();
-    const today = now.getDay();
+    const today = now.getDay(); // 0=Sunday, 6=Saturday
     const hours = now.getHours();
 
     let disableThursday = false,
-      disableFriday = false;
-    if (today === 4 && hours >= 9) disableThursday = true;
-    if (today === 5) disableThursday = true;
-    if (today === 5 && hours >= 9) disableFriday = true;
+      disableFriday = false,
+      disableSaturday = false;
 
-    if (today === 6 || today === 0) {
+    if (today === 4 && hours >= 9) disableThursday = true; // Jueves después de las 9am
+    if (today === 5) disableThursday = true; // Viernes ya pasó Jueves
+    if (today === 5 && hours >= 9) disableFriday = true; // Viernes después de las 9am
+    if (today === 6 && hours >= 9) disableSaturday = true; // Sábado después de las 9am
+
+    // Resetear todo el domingo
+    if (today === 0) {
       disableThursday = false;
       disableFriday = false;
+      disableSaturday = false;
     }
 
-    setDisabledDays({ Thursday: disableThursday, Friday: disableFriday });
+    setDisabledDays({
+      Thursday: disableThursday,
+      Friday: disableFriday,
+      Saturday: disableSaturday,
+    });
   }, []);
 
   const handleChange = (e) => {
@@ -133,6 +143,8 @@ export default function CartPage() {
       setNextAvailableDate(getNextDate(4));
     if (name === "deliveryDay" && value === "Friday")
       setNextAvailableDate(getNextDate(5));
+    if (name === "deliveryDay" && value === "Saturday")
+      setNextAvailableDate(getNextDate(6));
 
     setForm({ ...form, [name]: value });
   };
@@ -476,26 +488,28 @@ export default function CartPage() {
                         Delivery day:
                       </label>
                       <div className="flex gap-4 mt-2">
-                        {["Thursday", "Friday", "Other"].map((day) => (
-                          <label
-                            key={day}
-                            className={`text-sm flex items-center gap-1 ${
-                              disabledDays[day]
-                                ? "text-gray-400"
-                                : "text-gray-900"
-                            }`}
-                          >
-                            <input
-                              type="radio"
-                              name="deliveryDay"
-                              value={day}
-                              checked={form.deliveryDay === day}
-                              onChange={handleChange}
-                              disabled={disabledDays[day]}
-                            />
-                            {day}
-                          </label>
-                        ))}
+                        {["Thursday", "Friday", "Saturday", "Other"].map(
+                          (day) => (
+                            <label
+                              key={day}
+                              className={`text-sm flex items-center gap-1 ${
+                                disabledDays[day]
+                                  ? "text-gray-400"
+                                  : "text-gray-900"
+                              }`}
+                            >
+                              <input
+                                type="radio"
+                                name="deliveryDay"
+                                value={day}
+                                checked={form.deliveryDay === day}
+                                onChange={handleChange}
+                                disabled={disabledDays[day]}
+                              />
+                              {day}
+                            </label>
+                          )
+                        )}
                       </div>
                       {nextAvailableDate && (
                         <p className="text-xs text-gray-700 mt-1 italic">

@@ -42,7 +42,7 @@ export default function WeeklySalesPage() {
         </h1>
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-          {["Thursday", "Friday"].map((day) => (
+          {["Thursday", "Friday", "Saturday"].map((day) => (
             <div
               key={day}
               className="bg-white shadow-lg rounded-2xl p-6 border border-pink-100"
