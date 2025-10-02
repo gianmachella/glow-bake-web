@@ -2,12 +2,14 @@
 
 import { useEffect, useState } from "react";
 
+import Loading from "@/components/Loading";
 import Swal from "sweetalert2";
 import { motion } from "framer-motion";
 
 export default function SalesPage() {
   const [sales, setSales] = useState([]);
-  const [loading, setLoading] = useState(true);
+  const [loadingPage, setLoadingPage] = useState(true);
+  const [loadingAction, setLoadingAction] = useState(false);
 
   async function fetchSales() {
     try {
@@ -16,9 +18,9 @@ export default function SalesPage() {
       const data = await res.json();
       setSales(data);
     } catch (err) {
-      console.error("Error:", err);
+      Swal.fire("Error", "Could not fetch sales", "error");
     } finally {
-      setLoading(false);
+      setLoadingPage(false);
     }
   }
 
@@ -28,42 +30,37 @@ export default function SalesPage() {
 
   const handleDelete = async (id) => {
     const result = await Swal.fire({
-      title: "¿Eliminar venta?",
-      text: "Esta acción no se puede deshacer",
+      title: "Delete sale?",
+      text: "This action cannot be undone.",
       icon: "warning",
       showCancelButton: true,
-      confirmButtonColor: "#d33",
+      confirmButtonColor: "#ef4444",
       cancelButtonColor: "#6b7280",
-      confirmButtonText: "Sí, eliminar",
-      cancelButtonText: "Cancelar",
+      confirmButtonText: "Yes, delete",
     });
 
     if (!result.isConfirmed) return;
 
+    setLoadingAction(true);
     try {
       const res = await fetch(`/api/sales?id=${id}`, { method: "DELETE" });
       if (res.ok) {
-        Swal.fire("Eliminada ✅", "La venta fue eliminada.", "success");
+        Swal.fire("Deleted!", "Sale deleted successfully", "success");
         fetchSales();
       } else {
-        Swal.fire("Error", "No se pudo eliminar la venta.", "error");
+        Swal.fire("Error", "Could not delete sale", "error");
       }
     } catch (err) {
-      console.error("❌ Error al eliminar venta:", err);
-      Swal.fire("Error", "No se pudo conectar con el servidor.", "error");
+      Swal.fire("Error", "Unexpected error deleting sale", "error");
+    } finally {
+      setLoadingAction(false);
     }
   };
 
-  if (loading) {
-    return (
-      <section className="w-full min-h-screen flex items-center justify-center">
-        <p className="text-gray-500 text-lg animate-pulse">Loading Sales...</p>
-      </section>
-    );
-  }
-
   return (
     <section className="w-full min-h-screen bg-gradient-to-br from-pink-50 via-white to-pink-100 px-6 py-16">
+      <Loading isVisible={loadingPage || loadingAction} />
+
       <div className="max-w-6xl mx-auto">
         <motion.h1
           initial={{ opacity: 0, y: -10 }}
@@ -71,11 +68,13 @@ export default function SalesPage() {
           transition={{ duration: 0.6 }}
           className="text-4xl font-extrabold text-pink-600 mb-10 text-center"
         >
-          Sales History 📊
+          Sales History
         </motion.h1>
 
         {sales.length === 0 ? (
-          <p className="text-gray-600 text-center text-lg">No sales yet.</p>
+          <p className="text-gray-600 text-center text-lg">
+            No sales recorded yet.
+          </p>
         ) : (
           <motion.div
             initial={{ opacity: 0, y: 20 }}
@@ -121,7 +120,7 @@ export default function SalesPage() {
                             </span>{" "}
                             × {item.quantity}{" "}
                             <span className="text-gray-500">
-                              (${item.price.toFixed(2)} c/u)
+                              (${item.price.toFixed(2)} each)
                             </span>
                           </li>
                         ))}
@@ -133,7 +132,7 @@ export default function SalesPage() {
                     <td className="p-4 border-b border-gray-100 text-right">
                       <button
                         onClick={() => handleDelete(sale.id)}
-                        className="text-xs text-red-600 hover:underline"
+                        className="px-3 py-1.5 bg-red-500 text-white rounded-lg text-xs shadow hover:bg-red-600"
                       >
                         Delete
                       </button>

@@ -4,11 +4,13 @@ import { AnimatePresence, motion } from "framer-motion";
 import { useEffect, useState } from "react";
 
 import DashboardCookieCard from "@/components/DashboardCookieCard";
+import Loading from "@/components/Loading";
 import Swal from "sweetalert2";
 import ToggleSwitch from "@/components/ToggleSwitch";
 
 export default function CookiesPage() {
   const [cookies, setCookies] = useState([]);
+  const [loading, setLoading] = useState(true);
   const [isOpen, setIsOpen] = useState(false);
   const [isEdit, setIsEdit] = useState(false);
   const [form, setForm] = useState({
@@ -19,16 +21,23 @@ export default function CookiesPage() {
     description: "",
     ingredients: "",
     visible: true,
-    new: false, // 👈 usamos "new" en el estado local
+    new: false, // 👈 local state
     files: [],
   });
 
-  // cargar cookies
+  // 🔄 Load cookies
   useEffect(() => {
     async function fetchCookies() {
-      const res = await fetch("/api/cookies");
-      const data = await res.json();
-      setCookies(data);
+      try {
+        const res = await fetch("/api/cookies");
+        if (!res.ok) throw new Error("Failed to fetch cookies");
+        const data = await res.json();
+        setCookies(data);
+      } catch (err) {
+        Swal.fire("Error", "Could not load cookies", "error");
+      } finally {
+        setLoading(false);
+      }
     }
     fetchCookies();
   }, []);
@@ -66,7 +75,7 @@ export default function CookiesPage() {
       description: cookie.description || "",
       ingredients: cookie.ingredients || "",
       visible: cookie.visible,
-      new: cookie.isNew || false, // 👈 mapeamos desde "isNew"
+      new: cookie.isNew || false,
       files: [],
     });
     setIsEdit(true);
@@ -77,7 +86,7 @@ export default function CookiesPage() {
     e.preventDefault();
     const formData = new FormData();
 
-    // ⚡ traducimos "new" → "isNew"
+    // ⚡ translate "new" → "isNew"
     const payload = { ...form, isNew: form.new };
     delete payload.new;
 
@@ -96,6 +105,9 @@ export default function CookiesPage() {
       const newCookie = await res.json();
       setCookies([...cookies, newCookie]);
       setIsOpen(false);
+      Swal.fire("Success", "Cookie created successfully!", "success");
+    } else {
+      Swal.fire("Error", "Could not create cookie", "error");
     }
   };
 
@@ -103,7 +115,6 @@ export default function CookiesPage() {
     e.preventDefault();
     const formData = new FormData();
 
-    // ⚡ traducimos "new" → "isNew"
     const payload = { ...form, isNew: form.new };
     delete payload.new;
 
@@ -124,6 +135,9 @@ export default function CookiesPage() {
         prev.map((c) => (c.id === updated.id ? updated : c))
       );
       setIsOpen(false);
+      Swal.fire("Updated", "Cookie updated successfully!", "success");
+    } else {
+      Swal.fire("Error", "Could not update cookie", "error");
     }
   };
 
@@ -140,7 +154,7 @@ export default function CookiesPage() {
 
     if (!result.isConfirmed && !result.isDenied) return;
 
-    const soft = result.isConfirmed; // confirm = soft, deny = hard
+    const soft = result.isConfirmed;
 
     const res = await fetch("/api/cookies", {
       method: "DELETE",
@@ -158,7 +172,7 @@ export default function CookiesPage() {
         "success"
       );
     } else {
-      Swal.fire("Error", "Could not delete cookie.", "error");
+      Swal.fire("Error", "Could not delete cookie", "error");
     }
   };
 
@@ -188,6 +202,8 @@ export default function CookiesPage() {
     }
   };
 
+  if (loading) return <Loading />;
+
   return (
     <div className="p-6 bg-gradient-to-br from-pink-50 via-white to-pink-100 rounded-2xl shadow-lg min-h-screen space-y-10">
       {/* Header */}
@@ -213,7 +229,7 @@ export default function CookiesPage() {
             onEdit={openEditModal}
             onDelete={handleDelete}
             onToggleVisible={handleToggleVisible}
-            onToggleNew={handleToggleNew} // 👈 pasamos handler
+            onToggleNew={handleToggleNew}
           />
         ))}
       </div>
@@ -240,7 +256,7 @@ export default function CookiesPage() {
                   {isEdit ? "Edit Cookie" : "Add Cookie"}
                 </h2>
 
-                {/* 🔘 Switch de visibilidad */}
+                {/* 🔘 Visibility switch */}
                 <div className="absolute top-4 right-4 flex items-center gap-2">
                   <span className="text-xs text-gray-600">
                     {form.visible ? "Visible" : "Hidden"}
@@ -257,26 +273,24 @@ export default function CookiesPage() {
                 onSubmit={isEdit ? handleEdit : handleAdd}
                 className="space-y-5 text-gray-900"
               >
-                {/* Nombre */}
+                {/* Name */}
                 <div>
-                  <label className="block text-sm font-medium mb-1">
-                    Nombre
-                  </label>
+                  <label className="block text-sm font-medium mb-1">Name</label>
                   <input
                     type="text"
                     name="name"
                     value={form.name}
                     onChange={handleChange}
-                    placeholder="Ej: Nutella Cookie"
+                    placeholder="E.g: Nutella Cookie"
                     className="w-full p-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-pink-400 outline-none"
                     required
                   />
                 </div>
 
-                {/* Precio */}
+                {/* Price */}
                 <div>
                   <label className="block text-sm font-medium mb-1">
-                    Precio
+                    Price
                   </label>
                   <input
                     type="number"
@@ -284,7 +298,7 @@ export default function CookiesPage() {
                     name="price"
                     value={form.price}
                     onChange={handleChange}
-                    placeholder="Ej: 5.50"
+                    placeholder="E.g: 5.50"
                     className="w-full p-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-pink-400 outline-none"
                     required
                   />
@@ -300,7 +314,7 @@ export default function CookiesPage() {
                     name="shortDescription"
                     value={form.shortDescription}
                     onChange={handleChange}
-                    placeholder="Breve descripción de la cookie"
+                    placeholder="Short description of the cookie"
                     className="w-full p-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-pink-400 outline-none"
                   />
                 </div>
@@ -308,22 +322,22 @@ export default function CookiesPage() {
                 {/* Description */}
                 <div>
                   <label className="block text-sm font-medium mb-1">
-                    Descripción
+                    Description
                   </label>
                   <textarea
                     name="description"
                     value={form.description}
                     onChange={handleChange}
-                    placeholder="Descripción detallada"
+                    placeholder="Detailed description"
                     className="w-full p-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-pink-400 outline-none"
                     rows={3}
                   />
                 </div>
 
-                {/* Subir imágenes */}
+                {/* Upload images */}
                 <div>
                   <label className="block text-sm font-medium mb-2">
-                    Imágenes (máx. 2)
+                    Images (max. 2)
                   </label>
                   <input
                     type="file"
@@ -354,7 +368,7 @@ export default function CookiesPage() {
                   </div>
                 </div>
 
-                {/* Switch New */}
+                {/* New switch */}
                 <div className="flex items-center gap-2">
                   <span className="text-sm text-gray-600">
                     {form.new ? "New" : "Not New"}
@@ -372,13 +386,13 @@ export default function CookiesPage() {
                     onClick={() => setIsOpen(false)}
                     className="px-4 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300"
                   >
-                    Cancelar
+                    Cancel
                   </button>
                   <button
                     type="submit"
                     className="px-5 py-2 bg-pink-500 text-white rounded-lg shadow hover:bg-pink-600"
                   >
-                    {isEdit ? "Guardar cambios" : "Crear Cookie"}
+                    {isEdit ? "Save Changes" : "Create Cookie"}
                   </button>
                 </div>
               </form>

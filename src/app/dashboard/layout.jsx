@@ -18,11 +18,11 @@ export default function DashboardLayout({ children }) {
     { href: "/dashboard/sales", label: "Sales" },
     { href: "/dashboard/sales/week", label: "Weekly Sales" },
     { href: "/dashboard/customers", label: "Customers" },
-    { href: "/dashboard/expenses", label: "Gastos" },
+    { href: "/dashboard/expenses", label: "Expenses" },
   ];
 
   const costsLinks = [
-    { href: "/dashboard/ingredient-table", label: "Inventario" },
+    { href: "/dashboard/ingredient-table", label: "Inventory" },
     { href: "/dashboard/doughs", label: "Base Doughs" },
     { href: "/dashboard/dough-inventory", label: "Doughs Inventory" },
   ];

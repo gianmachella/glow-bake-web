@@ -1,34 +1,49 @@
 "use client";
 
+import { AnimatePresence, motion } from "framer-motion";
 import { useEffect, useState } from "react";
+
+import CustomSelect from "@/components/CustomSelect";
+import Loading from "@/components/Loading";
+import Swal from "sweetalert2";
 
 export default function ExpensesPage() {
   const [expenses, setExpenses] = useState([]);
   const [isOpen, setIsOpen] = useState(false);
   const [isEdit, setIsEdit] = useState(false);
+  const [loadingPage, setLoadingPage] = useState(true);
+  const [loadingAction, setLoadingAction] = useState(false);
   const [form, setForm] = useState({
     id: null,
     description: "",
     amount: "",
-    type: "Fijo",
+    type: "",
   });
 
-  // cargar gastos
+  const categoryOptions = [
+    { value: "Operational", label: "Operational" },
+    { value: "Marketing", label: "Marketing" },
+    { value: "Infrastructure", label: "Infrastructure" },
+    { value: "Per-Cookie", label: "Per-Cookie" },
+  ];
+
   useEffect(() => {
     async function fetchExpenses() {
-      const res = await fetch("/api/expenses");
-      const data = await res.json();
-      setExpenses(data);
+      try {
+        const res = await fetch("/api/expenses");
+        const data = await res.json();
+        setExpenses(data);
+      } catch (err) {
+        Swal.fire("Error", "Could not fetch expenses", "error");
+      } finally {
+        setLoadingPage(false);
+      }
     }
     fetchExpenses();
   }, []);
 
-  const handleChange = (e) => {
-    setForm({ ...form, [e.target.name]: e.target.value });
-  };
-
   const openAddModal = () => {
-    setForm({ id: null, description: "", amount: "", type: "Fijo" });
+    setForm({ id: null, description: "", amount: "", type: "" });
     setIsEdit(false);
     setIsOpen(true);
   };
@@ -41,161 +56,211 @@ export default function ExpensesPage() {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-
+    setLoadingAction(true);
     const method = isEdit ? "PUT" : "POST";
-    const res = await fetch("/api/expenses", {
-      method,
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(form),
-    });
 
-    if (res.ok) {
-      const newExpense = await res.json();
-      if (isEdit) {
-        setExpenses((prev) =>
-          prev.map((e) => (e.id === newExpense.id ? newExpense : e))
-        );
+    try {
+      const res = await fetch("/api/expenses", {
+        method,
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(form),
+      });
+
+      if (res.ok) {
+        const saved = await res.json();
+        if (isEdit) {
+          setExpenses((prev) =>
+            prev.map((exp) => (exp.id === saved.id ? saved : exp))
+          );
+          Swal.fire("Updated!", "Expense updated successfully", "success");
+        } else {
+          setExpenses([saved, ...expenses]);
+          Swal.fire("Created!", "Expense added successfully", "success");
+        }
+        setIsOpen(false);
       } else {
-        setExpenses([newExpense, ...expenses]);
+        Swal.fire("Error", "Could not save expense", "error");
       }
-      setIsOpen(false);
-    } else {
-      console.error("❌ Error guardando gasto:", await res.json());
+    } catch {
+      Swal.fire("Error", "Unexpected error saving expense", "error");
+    } finally {
+      setLoadingAction(false);
     }
   };
 
   const handleDelete = async (id) => {
-    if (!confirm("¿Seguro que quieres eliminar este gasto?")) return;
-
-    const res = await fetch("/api/expenses", {
-      method: "DELETE",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ id }),
+    const result = await Swal.fire({
+      title: "Delete expense?",
+      text: "This action cannot be undone.",
+      icon: "warning",
+      showCancelButton: true,
+      confirmButtonColor: "#ef4444",
+      cancelButtonColor: "#6b7280",
+      confirmButtonText: "Yes, delete",
     });
 
-    if (res.ok) {
-      setExpenses(expenses.filter((e) => e.id !== id));
+    if (!result.isConfirmed) return;
+
+    setLoadingAction(true);
+    try {
+      const res = await fetch("/api/expenses", {
+        method: "DELETE",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ id }),
+      });
+
+      if (res.ok) {
+        setExpenses(expenses.filter((e) => e.id !== id));
+        Swal.fire("Deleted!", "Expense deleted successfully", "success");
+      } else {
+        Swal.fire("Error", "Could not delete expense", "error");
+      }
+    } catch {
+      Swal.fire("Error", "Unexpected error deleting expense", "error");
+    } finally {
+      setLoadingAction(false);
     }
   };
 
   return (
-    <div className="p-6 min-h-screen bg-gray-50">
-      <div className="flex justify-between items-center mb-6">
-        <h1 className="text-3xl font-bold text-pink-600">Gastos</h1>
-        <button
-          onClick={openAddModal}
-          className="bg-pink-500 hover:bg-pink-600 text-white px-4 py-2 rounded-lg shadow"
-        >
-          + Agregar Gasto
-        </button>
-      </div>
+    <div className="p-8 min-h-screen bg-gradient-to-br from-pink-50 via-white to-pink-100">
+      {loadingPage && <Loading isVisible={true} />}
+      {loadingAction && <Loading isVisible={true} />}
 
-      <div className="overflow-x-auto bg-white rounded-2xl shadow">
-        <table className="w-full text-sm text-gray-800">
-          <thead>
-            <tr className="bg-pink-100 text-left font-semibold">
-              <th className="p-3 border-b">Descripción</th>
-              <th className="p-3 border-b">Monto</th>
-              <th className="p-3 border-b">Tipo</th>
-              <th className="p-3 border-b">Fecha</th>
-              <th className="p-3 border-b"></th>
-            </tr>
-          </thead>
-          <tbody>
-            {expenses.map((e) => (
-              <tr key={e.id} className="hover:bg-pink-50">
-                <td className="p-3 border-b">{e.description}</td>
-                <td className="p-3 border-b font-semibold text-pink-600">
-                  ${Number(e.amount).toFixed(2)}
-                </td>
-                <td className="p-3 border-b">
-                  <span className="px-2 py-1 bg-pink-100 rounded-lg text-xs text-pink-700 font-medium">
-                    {e.type}
-                  </span>
-                </td>
-                <td className="p-3 border-b">
-                  {new Date(e.createdAt).toLocaleDateString()}
-                </td>
-                <td className="p-3 border-b flex gap-2">
-                  <button
-                    onClick={() => openEditModal(e)}
-                    className="px-2 py-1 bg-blue-500 text-white rounded hover:bg-blue-600 text-xs"
-                  >
-                    Editar
-                  </button>
-                  <button
-                    onClick={() => handleDelete(e.id)}
-                    className="px-2 py-1 bg-red-500 text-white rounded hover:bg-red-600 text-xs"
-                  >
-                    Eliminar
-                  </button>
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
-
-      {/* Modal */}
-      {isOpen && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
-          <div className="bg-white p-6 rounded-2xl shadow w-full max-w-md">
-            <h2 className="text-xl text-black font-bold mb-4">
-              {isEdit ? "Editar Gasto" : "Agregar Gasto"}
-            </h2>
-            <form onSubmit={handleSubmit} className="space-y-3">
-              <input
-                type="text"
-                name="description"
-                placeholder="Descripción"
-                value={form.description}
-                onChange={handleChange}
-                className="w-full p-2 border rounded text-gray-800 placeholder-gray-400"
-                required
-              />
-              <input
-                type="number"
-                step="0.01"
-                name="amount"
-                placeholder="Monto"
-                value={form.amount}
-                onChange={handleChange}
-                className="w-full p-2 border rounded text-gray-800 placeholder-gray-400"
-                required
-              />
-              <select
-                name="category"
-                value={form.category}
-                onChange={handleChange}
-                className="w-full text-black p-2 border rounded"
-                required
-              >
-                <option value="">Selecciona categoría</option>
-                <option value="operativo">Operativo</option>
-                <option value="marketing">Marketing</option>
-                <option value="infraestructura">Infraestructura</option>
-                <option value="per-cookie">Per-Cookie</option>
-              </select>
-
-              <div className="flex justify-end gap-3 pt-2">
-                <button
-                  type="button"
-                  onClick={() => setIsOpen(false)}
-                  className="px-4 py-2 bg-gray-300 rounded hover:bg-gray-400"
-                >
-                  Cancelar
-                </button>
-                <button
-                  type="submit"
-                  className="px-4 py-2 bg-pink-500 text-white rounded hover:bg-pink-600"
-                >
-                  Guardar
-                </button>
-              </div>
-            </form>
+      {!loadingPage && (
+        <>
+          <div className="flex justify-between items-center mb-8">
+            <h1 className="text-4xl font-extrabold text-pink-600">Expenses</h1>
+            <button
+              onClick={openAddModal}
+              className="bg-pink-500 hover:bg-pink-600 text-white px-5 py-2.5 rounded-xl shadow-md font-medium transition"
+            >
+              + Add Expense
+            </button>
           </div>
-        </div>
+
+          <div className="overflow-x-auto bg-white/90 backdrop-blur-sm rounded-2xl shadow-lg border border-pink-100">
+            <table className="w-full text-sm text-gray-800">
+              <thead>
+                <tr className="bg-gradient-to-r from-pink-100 to-pink-200 text-left font-semibold text-pink-700">
+                  <th className="p-4">Description</th>
+                  <th className="p-4">Amount</th>
+                  <th className="p-4">Category</th>
+                  <th className="p-4">Date</th>
+                  <th className="p-4 text-center">Actions</th>
+                </tr>
+              </thead>
+              <tbody>
+                {expenses.map((e, idx) => (
+                  <motion.tr
+                    key={e.id}
+                    initial={{ opacity: 0, y: 10 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ delay: idx * 0.05 }}
+                    className="hover:bg-pink-50/70 transition"
+                  >
+                    <td className="p-4 border-b border-gray-100">
+                      {e.description}
+                    </td>
+                    <td className="p-4 border-b border-gray-100 font-semibold text-pink-600">
+                      ${Number(e.amount).toFixed(2)}
+                    </td>
+                    <td className="p-4 border-b border-gray-100">
+                      <span className="px-2 py-1 bg-pink-100 rounded-lg text-xs text-pink-700 font-medium">
+                        {e.type}
+                      </span>
+                    </td>
+                    <td className="p-4 border-b border-gray-100">
+                      {new Date(e.createdAt).toLocaleDateString()}
+                    </td>
+                    <td className="p-4 border-b border-gray-100 flex gap-3 justify-center">
+                      <button
+                        onClick={() => openEditModal(e)}
+                        className="px-3 py-1.5 bg-blue-500 hover:bg-blue-600 text-white rounded-lg text-xs shadow"
+                      >
+                        Edit
+                      </button>
+                      <button
+                        onClick={() => handleDelete(e.id)}
+                        className="px-3 py-1.5 bg-red-500 hover:bg-red-600 text-white rounded-lg text-xs shadow"
+                      >
+                        Delete
+                      </button>
+                    </td>
+                  </motion.tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </>
       )}
+
+      <AnimatePresence>
+        {isOpen && (
+          <motion.div
+            className="fixed inset-0 bg-black/40 backdrop-blur-sm flex items-center justify-center z-50"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+          >
+            <motion.div
+              initial={{ scale: 0.9, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              exit={{ scale: 0.9, opacity: 0 }}
+              transition={{ duration: 0.3 }}
+              className="bg-white rounded-2xl shadow-xl p-8 w-full max-w-md"
+            >
+              <h2 className="text-2xl font-bold mb-6 text-pink-600">
+                {isEdit ? "Edit Expense" : "Add Expense"}
+              </h2>
+              <form onSubmit={handleSubmit} className="space-y-4 text-gray-900">
+                <input
+                  type="text"
+                  name="description"
+                  placeholder="Description"
+                  value={form.description}
+                  onChange={(e) =>
+                    setForm({ ...form, description: e.target.value })
+                  }
+                  className="w-full p-3 border rounded-xl focus:ring-2 focus:ring-pink-400 outline-none"
+                  required
+                />
+                <input
+                  type="number"
+                  step="0.01"
+                  name="amount"
+                  placeholder="Amount"
+                  value={form.amount}
+                  onChange={(e) => setForm({ ...form, amount: e.target.value })}
+                  className="w-full p-3 border rounded-xl focus:ring-2 focus:ring-pink-400 outline-none"
+                  required
+                />
+                <CustomSelect
+                  options={categoryOptions}
+                  value={form.type}
+                  onChange={(val) => setForm({ ...form, type: val })}
+                  placeholder="Select category..."
+                />
+                <div className="flex justify-end gap-3 pt-4">
+                  <button
+                    type="button"
+                    onClick={() => setIsOpen(false)}
+                    className="px-4 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    type="submit"
+                    className="px-5 py-2 bg-pink-500 text-white rounded-lg shadow hover:bg-pink-600"
+                  >
+                    Save
+                  </button>
+                </div>
+              </form>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   );
 }

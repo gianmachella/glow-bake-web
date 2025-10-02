@@ -35,10 +35,17 @@ export async function GET() {
       where: { visible: true },
       include: {
         recipes: { include: { baseDough: true, ingredients: true } },
+        doughInventories: true, // 👈 incluir inventario
       },
       orderBy: { createdAt: "desc" },
     });
-    return new Response(JSON.stringify(cookies), {
+
+    const withStock = cookies.map((c) => ({
+      ...c,
+      frozenStock: c.doughInventories.reduce((acc, d) => acc + d.quantity, 0),
+    }));
+
+    return new Response(JSON.stringify(withStock), {
       status: 200,
       headers: { "Content-Type": "application/json" },
     });

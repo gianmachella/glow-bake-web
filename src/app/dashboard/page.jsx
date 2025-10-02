@@ -11,6 +11,7 @@ import {
 } from "recharts";
 import { useEffect, useState } from "react";
 
+import Loading from "@/components/Loading"; // 👈 Nuevo componente global
 import { motion } from "framer-motion";
 
 export default function Dashboard() {
@@ -32,20 +33,16 @@ export default function Dashboard() {
       }
     }
     fetchSummary();
-  }, [filter]); // 👈 cambia cuando filtro cambia
+  }, [filter]);
 
   if (loading) {
-    return (
-      <section className="w-full min-h-screen flex items-center justify-center">
-        <p className="text-gray-600">Cargando resumen...</p>
-      </section>
-    );
+    return <Loading />; // 👈 reemplazo directo
   }
 
   if (!summary) {
     return (
       <section className="w-full min-h-screen flex items-center justify-center">
-        <p className="text-red-600">Error cargando datos</p>
+        <p className="text-red-600">Error loading data</p>
       </section>
     );
   }
@@ -58,10 +55,10 @@ export default function Dashboard() {
         transition={{ duration: 0.6 }}
         className="text-4xl font-extrabold text-pink-600 mb-10 text-center"
       >
-        Dashboard Glow Bake ✨
+        Glow Bake Dashboard ✨
       </motion.h1>
 
-      {/* Botones de filtro */}
+      {/* Filter Buttons */}
       <div className="flex justify-center gap-4 mb-10">
         {["weekly", "monthly", "yearly"].map((f) => (
           <button
@@ -76,9 +73,9 @@ export default function Dashboard() {
                 : "bg-gray-200 text-gray-700 hover:bg-gray-300"
             }`}
           >
-            {f === "weekly" && "Semanal"}
-            {f === "monthly" && "Mensual"}
-            {f === "yearly" && "Anual"}
+            {f === "weekly" && "Weekly"}
+            {f === "monthly" && "Monthly"}
+            {f === "yearly" && "Yearly"}
           </button>
         ))}
       </div>
@@ -86,27 +83,25 @@ export default function Dashboard() {
       {/* KPIs */}
       <div className="grid grid-cols-1 md:grid-cols-4 gap-8 mb-12">
         <motion.div className="bg-gradient-to-br from-pink-100 to-pink-200 p-6 rounded-2xl shadow-lg">
-          <h2 className="text-lg font-semibold text-gray-700">
-            Ventas Totales
-          </h2>
+          <h2 className="text-lg font-semibold text-gray-700">Total Sales</h2>
           <p className="text-3xl font-bold text-gray-900 mt-2">
             ${(summary.totalRevenue || 0).toFixed(2)}
           </p>
         </motion.div>
         <motion.div className="bg-gradient-to-br from-teal-100 to-teal-200 p-6 rounded-2xl shadow-lg">
-          <h2 className="text-lg font-semibold text-gray-700">Órdenes</h2>
+          <h2 className="text-lg font-semibold text-gray-700">Orders</h2>
           <p className="text-3xl font-bold text-gray-900 mt-2">
             {summary.totalOrders || 0}
           </p>
         </motion.div>
         <motion.div className="bg-gradient-to-br from-yellow-100 to-yellow-200 p-6 rounded-2xl shadow-lg">
-          <h2 className="text-lg font-semibold text-gray-700">Gastos</h2>
+          <h2 className="text-lg font-semibold text-gray-700">Expenses</h2>
           <p className="text-3xl font-bold text-gray-900 mt-2">
             ${(summary.expenses || 0).toFixed(2)}
           </p>
         </motion.div>
         <motion.div className="bg-gradient-to-br from-green-100 to-green-200 p-6 rounded-2xl shadow-lg">
-          <h2 className="text-lg font-semibold text-gray-700">Ganancia Neta</h2>
+          <h2 className="text-lg font-semibold text-gray-700">Net Profit</h2>
           <p
             className={`text-3xl font-bold mt-2 ${
               (summary.netProfit || 0) < 0 ? "text-red-600" : "text-green-700"
@@ -125,13 +120,11 @@ export default function Dashboard() {
         className="bg-white/90 backdrop-blur-sm p-8 rounded-3xl shadow-xl"
       >
         <h2 className="text-2xl font-bold text-gray-800 mb-6 text-center">
-          Galletas más vendidas 🍪 ({filter})
+          Best Selling Cookies 🍪 ({filter})
         </h2>
 
         {summary.topCookies.length === 0 ? (
-          <p className="text-gray-500 text-center">
-            Todavía no hay ventas registradas.
-          </p>
+          <p className="text-gray-500 text-center">No sales recorded yet.</p>
         ) : (
           <>
             <ul className="space-y-3 mb-8">
@@ -142,7 +135,7 @@ export default function Dashboard() {
                 >
                   <span className="font-medium">{cookie.name}</span>
                   <span className="text-sm text-gray-600">
-                    {cookie.totalSold} uds —{" "}
+                    {cookie.totalSold} pcs —{" "}
                     <span className="font-semibold text-pink-600">
                       ${(cookie.totalRevenue || 0).toFixed(2)}
                     </span>
@@ -166,8 +159,8 @@ export default function Dashboard() {
                     }}
                     formatter={(value, name) =>
                       name === "totalSold"
-                        ? [`${value} uds`, "Cantidad"]
-                        : [`$${(value || 0).toFixed(2)}`, "Ingresos"]
+                        ? [`${value} pcs`, "Quantity"]
+                        : [`$${(value || 0).toFixed(2)}`, "Revenue"]
                     }
                   />
                   <Bar

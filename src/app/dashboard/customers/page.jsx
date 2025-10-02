@@ -3,10 +3,14 @@
 import { AnimatePresence, motion } from "framer-motion";
 import { useEffect, useState } from "react";
 
+import Loading from "@/components/Loading";
+import Swal from "sweetalert2";
+
 export default function CustomersPage() {
   const [customers, setCustomers] = useState([]);
   const [isOpen, setIsOpen] = useState(false);
   const [isEdit, setIsEdit] = useState(false);
+  const [loading, setLoading] = useState(true);
   const [form, setForm] = useState({
     id: null,
     name: "",
@@ -16,12 +20,19 @@ export default function CustomersPage() {
     address: "",
   });
 
-  // cargar clientes
+  // Load customers
   useEffect(() => {
     async function fetchCustomers() {
-      const res = await fetch("/api/customers");
-      const data = await res.json();
-      setCustomers(data);
+      try {
+        const res = await fetch("/api/customers");
+        if (!res.ok) throw new Error("Failed to fetch customers");
+        const data = await res.json();
+        setCustomers(data);
+      } catch {
+        Swal.fire("Error", "Could not load customers", "error");
+      } finally {
+        setLoading(false);
+      }
     }
     fetchCustomers();
   }, []);
@@ -51,48 +62,68 @@ export default function CustomersPage() {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-
     const method = isEdit ? "PUT" : "POST";
-    const res = await fetch("/api/customers", {
-      method,
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(form),
-    });
 
-    if (res.ok) {
+    try {
+      const res = await fetch("/api/customers", {
+        method,
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(form),
+      });
+
+      if (!res.ok) throw new Error("Request failed");
+
       const newCustomer = await res.json();
       if (isEdit) {
         setCustomers((prev) =>
           prev.map((c) => (c.id === newCustomer.id ? newCustomer : c))
         );
+        Swal.fire("Updated!", "Customer updated successfully", "success");
       } else {
         setCustomers([newCustomer, ...customers]);
+        Swal.fire("Created!", "Customer added successfully", "success");
       }
+
       setIsOpen(false);
-    } else {
-      console.error("❌ Error guardando cliente:", await res.json());
+    } catch {
+      Swal.fire("Error", "Could not save customer", "error");
     }
   };
 
   const handleDelete = async (id) => {
-    if (!confirm("¿Seguro que quieres eliminar este cliente?")) return;
-
-    const res = await fetch("/api/customers", {
-      method: "DELETE",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ id }),
+    const result = await Swal.fire({
+      title: "Delete customer?",
+      text: "This action cannot be undone.",
+      icon: "warning",
+      showCancelButton: true,
+      confirmButtonText: "Yes, delete",
     });
 
-    if (res.ok) {
+    if (!result.isConfirmed) return;
+
+    try {
+      const res = await fetch("/api/customers", {
+        method: "DELETE",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ id }),
+      });
+
+      if (!res.ok) throw new Error("Delete failed");
+
       setCustomers(customers.filter((c) => c.id !== id));
+      Swal.fire("Deleted!", "Customer removed successfully", "success");
+    } catch {
+      Swal.fire("Error", "Could not delete customer", "error");
     }
   };
+
+  if (loading) return <Loading />;
 
   return (
     <div className="p-8 min-h-screen bg-gradient-to-br from-pink-50 via-white to-pink-100">
       {/* Header */}
       <div className="flex justify-between items-center mb-8">
-        <h1 className="text-4xl font-extrabold text-pink-600">Clientes</h1>
+        <h1 className="text-4xl font-extrabold text-pink-600">Customers</h1>
         <button
           onClick={openAddModal}
           className="bg-pink-500 hover:bg-pink-600 text-white px-5 py-2.5 rounded-xl shadow-md font-medium transition"
@@ -101,7 +132,7 @@ export default function CustomersPage() {
         </button>
       </div>
 
-      {/* Tabla */}
+      {/* Table */}
       <div className="overflow-x-auto bg-white/90 backdrop-blur-sm rounded-2xl shadow-lg border border-pink-100">
         <table className="w-full text-sm text-gray-800">
           <thead>
@@ -167,13 +198,13 @@ export default function CustomersPage() {
               className="bg-white rounded-2xl shadow-xl p-8 w-full max-w-md"
             >
               <h2 className="text-2xl font-bold mb-6 text-pink-600">
-                {isEdit ? "Editar Cliente" : "Agregar Cliente"}
+                {isEdit ? "Edit Customer" : "Add Customer"}
               </h2>
               <form onSubmit={handleSubmit} className="space-y-4">
                 <input
                   type="text"
                   name="name"
-                  placeholder="Name"
+                  placeholder="First Name"
                   value={form.name}
                   onChange={handleChange}
                   className="w-full p-3 border rounded-xl focus:ring-2 focus:ring-pink-400 outline-none"
