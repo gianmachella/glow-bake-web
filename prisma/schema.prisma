@@ -192,3 +192,20 @@ enum Unit {
   unidad @map("UNIT")
   pack   @map("PACK")
 }
+
+model DeliverySettings {
+  id             Int                @id @default(1)
+  enableSaturday Boolean            @default(true)
+  extraDays      Json               @default("[]")
+  specialDates   SpecialDate[]
+}
+
+model SpecialDate {
+  id         Int      @id @default(autoincrement())
+  productId  String
+  date       DateTime
+  settings   DeliverySettings @relation(fields: [settingsId], references: [id])
+  settingsId Int
+}
+
+

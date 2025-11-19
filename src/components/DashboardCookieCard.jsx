@@ -98,10 +98,10 @@ export default function DashboardCookieCard({
         {/* 💵 Info financiera */}
         <div className="mt-3 text-sm space-y-1">
           <p className="text-gray-800 font-semibold">
-            Precio: ${cookie.price.toFixed(2)}
+            Price: ${cookie.price.toFixed(2)}
           </p>
           <p className="text-gray-700 text-xs mt-1">
-            Costo: ${costo} – Ganancia: ${ganancia}
+            Cost: ${costo} – Profit: ${ganancia}
           </p>
         </div>
       </div>
@@ -115,21 +115,21 @@ export default function DashboardCookieCard({
           className="flex-1 bg-pink-100 hover:bg-pink-200 text-pink-700 
                      px-2 py-1 rounded-lg text-xs font-medium transition"
         >
-          Ingredientes
+          Ingredients
         </button>
         <button
           onClick={() => onEdit(cookie)}
           className="flex-1 bg-gray-100 hover:bg-gray-200 text-gray-700 
                      px-2 py-1 rounded-lg text-xs font-medium transition"
         >
-          Editar
+          Edit
         </button>
         <button
           onClick={() => onDelete(cookie.id)}
           className="flex-1 bg-red-100 hover:bg-red-200 text-red-600 
                      px-2 py-1 rounded-lg text-xs font-medium transition"
         >
-          Eliminar
+          Delete
         </button>
       </div>
     </motion.div>

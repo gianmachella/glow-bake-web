@@ -19,17 +19,15 @@ export default function CartPage() {
     notes: "",
     address: "",
     city: "",
-    deliveryMethod: "", // Delivery o Pickup
+    deliveryMethod: "",
     deliveryDay: "",
   });
 
   const [errors, setErrors] = useState({});
   const [loading, setLoading] = useState(false);
-  const [disabledDays, setDisabledDays] = useState({
-    Thursday: false,
-    Friday: false,
-    Saturday: false,
-  });
+  const [disabledDays, setDisabledDays] = useState({});
+
+  const [settings, setSettings] = useState(null);
 
   const [nextAvailableDate, setNextAvailableDate] = useState("");
 
@@ -38,9 +36,18 @@ export default function CartPage() {
     0
   );
 
+  const WEEKDAY_MAP = {
+    Sunday: 0,
+    Monday: 1,
+    Tuesday: 2,
+    Wednesday: 3,
+    Thursday: 4,
+    Friday: 5,
+    Saturday: 6,
+  };
+
   const router = useRouter();
 
-  // 📦 reglas de delivery por ciudad
   const getDeliveryMessage = () => {
     switch (form.city) {
       case "Princeton":
@@ -60,7 +67,6 @@ export default function CartPage() {
     }
   };
 
-  // 👉 próxima fecha
   const getNextDate = (targetDay) => {
     const today = new Date();
     const day = today.getDay();
@@ -78,65 +84,80 @@ export default function CartPage() {
     });
   };
 
-  useEffect(() => {
-    const now = new Date();
-    const today = now.getDay(); // 0=Sunday, 6=Saturday
-    const hours = now.getHours();
+  const getAvailableDays = () => {
+    if (!settings) return [];
 
-    let disableThursday = false,
-      disableFriday = false,
-      disableSaturday = false;
+    let days = ["Friday"];
 
-    if (today === 4 && hours >= 9) disableThursday = true; // Jueves después de las 9am
-    if (today === 5) disableThursday = true; // Viernes ya pasó Jueves
-    if (today === 5 && hours >= 9) disableFriday = true; // Viernes después de las 9am
-    if (today === 6 && hours >= 9) disableSaturday = true; // Sábado después de las 9am
-
-    // Resetear todo el domingo
-    if (today === 0) {
-      disableThursday = false;
-      disableFriday = false;
-      disableSaturday = false;
+    if (settings.enableSaturday) {
+      days.push("Saturday");
     }
 
-    setDisabledDays({
-      Thursday: disableThursday,
-      Friday: disableFriday,
-      Saturday: disableSaturday,
+    settings.extraDays?.forEach((d) => {
+      if (d.active) days.push(d.day);
     });
-  }, []);
+
+    const specialDates = settings.specialDates
+      ?.filter((s) => cartItems.some((item) => item.id === s.productId))
+      .map((s) =>
+        new Date(s.date).toLocaleDateString("en-US", {
+          weekday: "long",
+          month: "long",
+          day: "numeric",
+          year: "numeric",
+        })
+      );
+
+    if (specialDates?.length > 0) {
+      return specialDates;
+    }
+
+    return [...days, "Other"];
+  };
+
+  useEffect(() => {
+    if (!settings) return;
+
+    const available = getAvailableDays();
+
+    if (form.deliveryDay && !available.includes(form.deliveryDay)) {
+      setForm((prev) => ({
+        ...prev,
+        deliveryDay: "",
+      }));
+    }
+  }, [settings]);
 
   const handleChange = (e) => {
     const { name, value } = e.target;
 
-    if (
-      name === "deliveryDay" &&
-      value === "Other" &&
-      form.deliveryMethod === "Pickup"
-    ) {
-      Swal.fire({
-        icon: "info",
-        title: "Special Catering Orders (Pickup)",
-        html: "The 'Other' option is only for catering or special orders.<br/><strong>The minimum purchase is 10 cookies for this service.</strong><br/>Please contact us directly.",
-        confirmButtonColor: "#ec4899",
-      });
-      setNextAvailableDate(`Contact us to schedule Only text: (945) 400 5808`);
+    if (name === "deliveryDay") {
+      if (!WEEKDAY_MAP[value]) {
+        setNextAvailableDate(value);
+        setForm({ ...form, deliveryDay: value });
+        return;
+      }
+
+      const weekdayNum = WEEKDAY_MAP[value];
+      const nextDate = getNextDate(weekdayNum);
+
+      setNextAvailableDate(nextDate);
     }
 
-    if (
-      name === "deliveryDay" &&
-      value === "Other" &&
-      form.deliveryMethod === "Delivery"
-    ) {
+    if (name === "deliveryDay" && value === "Other") {
       Swal.fire({
         icon: "info",
-        title: "Special Catering Orders (Delivery)",
-        html: "The 'Other' option is only for catering or special orders.<br/>Please contact us directly for details.",
+        title: "Special catering order",
+        html: `
+      'Other' is only for catering orders.<br/>
+      <b>Minimum 10 cookies.</b><br/>
+      Contact us at: <br/>
+      <b>(945) 400 5808 (text only)</b>
+    `,
         confirmButtonColor: "#ec4899",
       });
-      setNextAvailableDate(
-        `Contact us to schedule <br/> Only text: (945) 400 5808`
-      );
+
+      setNextAvailableDate("Contact us directly");
     }
 
     if (name === "deliveryDay" && value === "Thursday")
@@ -146,11 +167,20 @@ export default function CartPage() {
     if (name === "deliveryDay" && value === "Saturday")
       setNextAvailableDate(getNextDate(6));
 
+    if (name === "deliveryMethod") {
+      setForm((prev) => ({
+        ...prev,
+        deliveryDay: "",
+      }));
+
+      setNextAvailableDate("");
+    }
     setForm({ ...form, [name]: value });
   };
 
   const validate = () => {
     const newErrors = {};
+
     if (!form.name) newErrors.name = "First name is required.";
     if (!form.lastName) newErrors.lastName = "Last name is required.";
     if (!form.email.includes("@")) newErrors.email = "Valid email required.";
@@ -158,13 +188,24 @@ export default function CartPage() {
     if (!form.deliveryMethod)
       newErrors.deliveryMethod = "Select delivery or pickup.";
 
+    const availableDays = getAvailableDays();
+
     if (form.deliveryMethod === "Delivery") {
       if (!form.address) newErrors.address = "Address required.";
       if (!form.city) newErrors.city = "Select a city.";
       if (!form.deliveryDay) newErrors.deliveryDay = "Select a delivery day.";
+
+      if (form.deliveryDay && !availableDays.includes(form.deliveryDay)) {
+        newErrors.deliveryDay = "This day is not available.";
+      }
     }
+
     if (form.deliveryMethod === "Pickup") {
       if (!form.deliveryDay) newErrors.deliveryDay = "Select a pickup day.";
+
+      if (form.deliveryDay && !availableDays.includes(form.deliveryDay)) {
+        newErrors.deliveryDay = "This day is not available.";
+      }
     }
 
     setErrors(newErrors);
@@ -185,9 +226,9 @@ export default function CartPage() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           ...form,
-          total, // 👈 subtotal sin delivery
-          deliveryFee: deliveryCost, // 👈 fee separado
-          items: cartItems, // 👈 solo cookies
+          total,
+          deliveryFee: deliveryCost,
+          items: cartItems,
         }),
       });
 
@@ -213,6 +254,20 @@ export default function CartPage() {
   useEffect(() => {
     window.scrollTo({ top: 0, behavior: "smooth" });
   }, [cartItems]);
+
+  useEffect(() => {
+    const fetchSettings = async () => {
+      try {
+        const res = await fetch("/api/settings/delivery");
+        const data = await res.json();
+        setSettings(data);
+      } catch (err) {
+        console.error("Error loading settings:", err);
+      }
+    };
+
+    fetchSettings();
+  }, []);
 
   return (
     <section className="w-full min-h-screen bg-pink-50 px-6 py-12 pt-24">
@@ -387,7 +442,7 @@ export default function CartPage() {
                         Pickup day:
                       </label>
                       <div className="flex gap-4 mt-2">
-                        {["Thursday", "Friday", "Other"].map((day) => (
+                        {getAvailableDays().map((day) => (
                           <label
                             key={day}
                             className={`text-sm flex items-center gap-1 ${
@@ -404,15 +459,24 @@ export default function CartPage() {
                               onChange={handleChange}
                               disabled={disabledDays[day]}
                             />
+                            {settings?.specialDates?.some((s) =>
+                              cartItems.some((i) => i.id === s.productId)
+                            ) && (
+                              <p className="text-xs text-yellow-700 bg-yellow-100 p-2 rounded mt-2">
+                                ⚠️ This item has a fixed delivery/pickup date.
+                              </p>
+                            )}
+
                             {day}
                           </label>
                         ))}
                       </div>
                       {nextAvailableDate && (
-                        <p className="text-xs text-gray-700 mt-1 italic">
-                          {nextAvailableDate}
+                        <p className="text-xs text-gray-600 mt-1 italic">
+                          Next available date: {nextAvailableDate}
                         </p>
                       )}
+
                       <p className="text-xs text-red-600 mt-1 h-4">
                         {errors.deliveryDay || ""}
                       </p>
@@ -488,28 +552,34 @@ export default function CartPage() {
                         Delivery day:
                       </label>
                       <div className="flex gap-4 mt-2">
-                        {["Thursday", "Friday", "Saturday", "Other"].map(
-                          (day) => (
-                            <label
-                              key={day}
-                              className={`text-sm flex items-center gap-1 ${
-                                disabledDays[day]
-                                  ? "text-gray-400"
-                                  : "text-gray-900"
-                              }`}
-                            >
-                              <input
-                                type="radio"
-                                name="deliveryDay"
-                                value={day}
-                                checked={form.deliveryDay === day}
-                                onChange={handleChange}
-                                disabled={disabledDays[day]}
-                              />
-                              {day}
-                            </label>
-                          )
-                        )}
+                        {getAvailableDays().map((day) => (
+                          <label
+                            key={day}
+                            className={`text-sm flex items-center gap-1 ${
+                              disabledDays[day]
+                                ? "text-gray-400"
+                                : "text-gray-900"
+                            }`}
+                          >
+                            <input
+                              type="radio"
+                              name="deliveryDay"
+                              value={day}
+                              checked={form.deliveryDay === day}
+                              onChange={handleChange}
+                              disabled={disabledDays[day]}
+                            />
+                            {settings?.specialDates?.some((s) =>
+                              cartItems.some((i) => i.id === s.productId)
+                            ) && (
+                              <p className="text-xs text-yellow-700 bg-yellow-100 p-2 rounded mt-2">
+                                ⚠️ This item has a fixed delivery/pickup date.
+                              </p>
+                            )}
+
+                            {day}
+                          </label>
+                        ))}
                       </div>
                       {nextAvailableDate && (
                         <p className="text-xs text-gray-700 mt-1 italic">

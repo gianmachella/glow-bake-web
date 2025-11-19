@@ -144,7 +144,7 @@ export default function ExpensesPage() {
               <thead>
                 <tr className="bg-gradient-to-r from-pink-100 to-pink-200 text-left font-semibold text-pink-700">
                   <th className="p-4">Description</th>
-                  <th className="p-4">Amount</th>
+                  <th className="p-4">Amount per Cookie</th>
                   <th className="p-4">Category</th>
                   <th className="p-4">Date</th>
                   <th className="p-4 text-center">Actions</th>

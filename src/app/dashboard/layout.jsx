@@ -15,6 +15,7 @@ export default function DashboardLayout({ children }) {
   const links = [
     { href: "/dashboard", label: "Dashboard" },
     { href: "/dashboard/cookies", label: "Cookies" },
+    { href: "/dashboard/delivery-settings", label: "Delivery Settings" },
     { href: "/dashboard/sales", label: "Sales" },
     { href: "/dashboard/sales/week", label: "Weekly Sales" },
     { href: "/dashboard/customers", label: "Customers" },
@@ -29,7 +30,6 @@ export default function DashboardLayout({ children }) {
 
   return (
     <div className="flex h-screen bg-gradient-to-br from-pink-50 via-white to-pink-100">
-      {/* Sidebar fijo a la izquierda */}
       <aside className="fixed left-0 top-0 h-screen w-64 bg-white/80 backdrop-blur-sm border-r border-pink-200 p-6 flex flex-col shadow-xl">
         <img
           src="/images/banners/Glow Bake.png"

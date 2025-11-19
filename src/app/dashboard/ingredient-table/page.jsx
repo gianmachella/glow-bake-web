@@ -405,9 +405,7 @@ export default function IngredientsPage() {
               <form onSubmit={handleSubmit} className="space-y-4 text-gray-900">
                 {/* Nombre */}
                 <div>
-                  <label className="block text-sm font-medium mb-1">
-                    Nombre
-                  </label>
+                  <label className="block text-sm font-medium mb-1">Name</label>
                   <input
                     type="text"
                     name="name"
@@ -422,7 +420,7 @@ export default function IngredientsPage() {
                 {/* Cantidad total */}
                 <div>
                   <label className="block text-sm font-medium mb-1">
-                    Cantidad total
+                    Quantity per Package
                   </label>
                   <input
                     type="number"
@@ -439,20 +437,20 @@ export default function IngredientsPage() {
                 {/* Unidad */}
                 <div>
                   <label className="block text-sm font-medium mb-1">
-                    Unidad
+                    Unit Type
                   </label>
                   <CustomSelect
                     options={unitOptions}
                     value={form.unitType}
                     onChange={(val) => setForm({ ...form, unitType: val })}
-                    placeholder="Seleccione unidad"
+                    placeholder="Select unit..."
                   />
                 </div>
 
                 {/* Precio */}
                 <div>
                   <label className="block text-sm font-medium mb-1">
-                    Precio
+                    Price
                   </label>
                   <input
                     type="number"
@@ -469,7 +467,7 @@ export default function IngredientsPage() {
                 {/* Restante */}
                 <div>
                   <label className="block text-sm font-medium mb-1">
-                    Restante
+                    Remaining
                   </label>
                   <input
                     type="number"
@@ -485,7 +483,7 @@ export default function IngredientsPage() {
 
                 <div>
                   <label className="block text-sm font-medium mb-1">
-                    Paquetes
+                    Packages
                   </label>
                   <input
                     type="number"
@@ -504,13 +502,13 @@ export default function IngredientsPage() {
                     onClick={() => setIsOpen(false)}
                     className="px-4 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300"
                   >
-                    Cancelar
+                    Cancel
                   </button>
                   <button
                     type="submit"
                     className="px-5 py-2 bg-pink-500 text-white rounded-lg shadow hover:bg-pink-600"
                   >
-                    Guardar
+                    Save
                   </button>
                 </div>
               </form>

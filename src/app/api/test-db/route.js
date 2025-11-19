@@ -1,19 +1,19 @@
-import { PrismaClient } from "@prisma/client";
-
-const prisma = new PrismaClient();
+import prisma from "@/lib/prisma";
 
 export async function GET() {
   try {
-    const count = await prisma.customer.count(); // 👈 prueba básica
-    return new Response(JSON.stringify({ ok: true, customers: count }), {
-      status: 200,
+    const settings = await prisma.deliverySettings.upsert({
+      where: { id: 1 },
+      update: {},
+      create: {
+        id: 1,
+        enableSaturday: true,
+        extraDays: [],
+      },
     });
+
+    return Response.json(settings);
   } catch (err) {
-    console.error("DB connection error:", err);
-    return new Response(JSON.stringify({ ok: false, error: err.message }), {
-      status: 500,
-    });
-  } finally {
-    await prisma.$disconnect();
+    return Response.json({ error: err.message }, { status: 500 });
   }
 }
