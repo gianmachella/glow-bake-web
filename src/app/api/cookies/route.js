@@ -32,10 +32,9 @@ async function recalcCookieCost(cookieId) {
 export async function GET() {
   try {
     const cookies = await prisma.cookie.findMany({
-      where: { visible: true },
       include: {
         recipes: { include: { baseDough: true, ingredients: true } },
-        doughInventories: true, // 👈 incluir inventario
+        doughInventories: true,
       },
       orderBy: { createdAt: "desc" },
     });
