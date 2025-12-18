@@ -1,18 +1,20 @@
-import { Buffer } from "buffer";
 import prisma from "@/lib/prisma";
 import { supabase } from "@/lib/supabase";
 
 async function uploadToSupabase(file) {
-  const buffer = Buffer.from(await file.arrayBuffer());
   const filename = `${Date.now()}-${file.name}`;
+
   const { error } = await supabase.storage
     .from("cookies")
-    .upload(filename, buffer, {
+    .upload(filename, file, {
       contentType: file.type,
       upsert: true,
     });
 
-  if (error) throw error;
+  if (error) {
+    console.error("Supabase upload error:", error);
+    throw error;
+  }
 
   const { data } = supabase.storage.from("cookies").getPublicUrl(filename);
   return data.publicUrl;
