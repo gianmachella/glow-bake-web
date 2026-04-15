@@ -21,7 +21,8 @@ export default function POSPage() {
   const [cart, setCart] = useState([]);
   const [email, setEmail] = useState("");
   const [loading, setLoading] = useState(false);
-  const [paymentMethod, setPaymentMethod] = useState(""); // Estado para el método seleccionado
+  const [paymentMethod, setPaymentMethod] = useState("");
+  const [hasCoupon, setHasCoupon] = useState(false);
 
   useEffect(() => {
     fetch("/api/cookies")
@@ -60,7 +61,11 @@ export default function POSPage() {
     setCart((prev) => prev.filter((item) => item.id !== id));
   };
 
-  const total = cart.reduce((acc, item) => acc + item.price * item.quantity, 0);
+  // CORRECCIÓN: Usar 'cart' y aplicar lógica de descuento en el cálculo visual
+  const total = cart.reduce((acc, item) => {
+    const currentPrice = hasCoupon ? item.price - 1 : item.price;
+    return acc + currentPrice * item.quantity;
+  }, 0);
 
   const handleCheckout = async () => {
     if (!paymentMethod || cart.length === 0) return;
@@ -71,7 +76,8 @@ export default function POSPage() {
         items: cart.map((item) => ({
           cookieId: item.id,
           quantity: item.quantity,
-          price: item.price,
+          // IMPORTANTE: Enviamos el precio con el descuento aplicado a la API
+          price: hasCoupon ? item.price - 1 : item.price,
           name: item.name,
         })),
         deliveryDay: "Event",
@@ -88,19 +94,21 @@ export default function POSPage() {
 
       if (res.ok) {
         Swal.fire({
-          title: "¡Venta Exitosa!",
-          text: email ? `Recibo enviado a ${email}` : "Venta registrada",
+          title: "Success!",
+          text: email ? `Receipt sent to ${email}` : "Sale recorded",
           icon: "success",
           confirmButtonColor: "#ec4899",
         });
+        // Resetear todo para la siguiente venta
         setCart([]);
         setEmail("");
         setPaymentMethod("");
+        setHasCoupon(false);
       } else {
-        throw new Error("Error en el servidor");
+        throw new Error("Server error");
       }
     } catch (error) {
-      Swal.fire("Error", "No se pudo guardar la venta", "error");
+      Swal.fire("Error", "Could not save the sale", "error");
     } finally {
       setLoading(false);
     }
@@ -124,7 +132,7 @@ export default function POSPage() {
                 className="w-full h-full object-cover"
               />
             </div>
-            <h3 className="font-bold text-gray-800 uppercase text-xs">
+            <h3 className="font-bold text-gray-800 uppercase text-[10px] tracking-tighter">
               {cookie.name}
             </h3>
             <p className="text-pink-600 font-black">
@@ -150,70 +158,93 @@ export default function POSPage() {
         {/* Lista de productos en carrito */}
         <div className="flex-1 overflow-y-auto p-4 space-y-3">
           <AnimatePresence>
-            {cart.map((item) => (
-              <motion.div
-                key={item.id}
-                initial={{ opacity: 0, x: 20 }}
-                animate={{ opacity: 1, x: 0 }}
-                exit={{ opacity: 0, x: -20 }}
-                className="flex justify-between items-center bg-gray-50 p-3 rounded-2xl group"
-              >
-                <div className="flex items-center gap-3">
-                  {/* BOTONES REDONDOS DE CANTIDAD */}
-                  <div className="flex flex-col items-center gap-1">
-                    <button
-                      onClick={() => addToCart(item)}
-                      className="w-7 h-7 rounded-full bg-white border border-pink-200 text-pink-500 flex items-center justify-center hover:bg-pink-500 hover:text-white transition-colors shadow-sm"
-                    >
-                      <Plus size={14} strokeWidth={3} />
-                    </button>
-
-                    <span className="font-black text-gray-800 text-xs">
-                      {item.quantity}
-                    </span>
-
-                    <button
-                      onClick={() => decreaseQuantity(item.id)}
-                      className="w-7 h-7 rounded-full bg-white border border-gray-200 text-gray-400 flex items-center justify-center hover:bg-gray-100 transition-colors shadow-sm"
-                    >
-                      <Minus size={14} strokeWidth={3} />
-                    </button>
-                  </div>
-
-                  <div>
-                    <p className="font-bold text-gray-800 text-sm leading-tight">
-                      {item.name}
-                    </p>
-                    <p className="text-xs text-pink-500 font-bold">
-                      ${(item.quantity * item.price).toFixed(2)}
-                    </p>
-                  </div>
-                </div>
-
-                <button
-                  onClick={() => removeFromCart(item.id)}
-                  className="text-gray-300 hover:text-red-500 transition-colors p-2"
+            {cart.map((item) => {
+              const displayPrice = hasCoupon ? item.price - 1 : item.price;
+              return (
+                <motion.div
+                  key={item.id}
+                  initial={{ opacity: 0, x: 20 }}
+                  animate={{ opacity: 1, x: 0 }}
+                  exit={{ opacity: 0, x: -20 }}
+                  className="flex justify-between items-center bg-gray-50 p-3 rounded-2xl group"
                 >
-                  <Trash2 size={18} />
-                </button>
-              </motion.div>
-            ))}
+                  <div className="flex items-center gap-3">
+                    <div className="flex flex-col items-center gap-1">
+                      <button
+                        onClick={() => addToCart(item)}
+                        className="w-7 h-7 rounded-full bg-white border border-pink-200 text-pink-500 flex items-center justify-center hover:bg-pink-500 hover:text-white transition-colors shadow-sm"
+                      >
+                        <Plus size={14} strokeWidth={3} />
+                      </button>
+                      <span className="font-black text-gray-800 text-xs">
+                        {item.quantity}
+                      </span>
+                      <button
+                        onClick={() => decreaseQuantity(item.id)}
+                        className="w-7 h-7 rounded-full bg-white border border-gray-200 text-gray-400 flex items-center justify-center hover:bg-gray-100 transition-colors shadow-sm"
+                      >
+                        <Minus size={14} strokeWidth={3} />
+                      </button>
+                    </div>
+
+                    <div>
+                      <p className="font-bold text-gray-800 text-sm leading-tight">
+                        {item.name}
+                      </p>
+                      <p className="text-xs text-pink-500 font-bold">
+                        ${(item.quantity * displayPrice).toFixed(2)}
+                        {hasCoupon && (
+                          <span className="ml-1 text-[8px] text-green-500">
+                            (Disc. applied)
+                          </span>
+                        )}
+                      </p>
+                    </div>
+                  </div>
+
+                  <button
+                    onClick={() => removeFromCart(item.id)}
+                    className="text-gray-300 hover:text-red-500 transition-colors p-2"
+                  >
+                    <Trash2 size={18} />
+                  </button>
+                </motion.div>
+              );
+            })}
           </AnimatePresence>
 
           {cart.length === 0 && (
             <div className="h-full flex flex-col items-center justify-center text-gray-400 italic py-10 text-center">
-              <p>No hay galletas seleccionadas</p>
+              <p>No cookies selected</p>
             </div>
           )}
         </div>
 
         {/* Sección de Pago */}
         <div className="p-6 border-t border-gray-100 bg-gray-50/50 space-y-4">
+          {/* Coupon Toggle */}
+          <div className="flex items-center justify-between p-4 bg-pink-50 rounded-2xl border border-pink-100">
+            <div className="flex flex-col">
+              <span className="font-bold text-pink-700 text-sm">
+                Special Coupon?
+              </span>
+              <span className="text-[10px] text-pink-400 font-black uppercase tracking-tighter">
+                -$1.00 OFF PER COOKIE
+              </span>
+            </div>
+            <input
+              type="checkbox"
+              className="toggle toggle-secondary toggle-sm"
+              checked={hasCoupon}
+              onChange={(e) => setHasCoupon(e.target.checked)}
+            />
+          </div>
+
           <div className="relative">
             <User className="absolute left-4 top-3.5 text-gray-400" size={18} />
             <input
               type="email"
-              placeholder="Email del cliente (Opcional)"
+              placeholder="Customer Email (Optional)"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               className="w-full pl-12 pr-4 py-3 bg-white border border-gray-200 rounded-2xl text-sm focus:outline-none focus:ring-2 focus:ring-pink-500 transition-all"
@@ -222,7 +253,7 @@ export default function POSPage() {
 
           <div className="flex justify-between items-center py-1">
             <span className="text-gray-500 font-bold uppercase tracking-widest text-[10px]">
-              Total a Pagar
+              Total to Pay
             </span>
             <span className="text-3xl font-black text-gray-800">
               ${total.toFixed(2)}
