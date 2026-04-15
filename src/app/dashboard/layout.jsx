@@ -1,26 +1,74 @@
 "use client";
 
 import { AnimatePresence, motion } from "framer-motion";
+import {
+  CalendarDays,
+  ChevronLeft,
+  ChevronRight,
+  CircleDollarSign,
+  Cookie,
+  LayoutDashboard,
+  LogOut,
+  Package,
+  Receipt,
+  Store,
+  TicketPercent,
+  Truck,
+  Users,
+} from "lucide-react";
 
 import Link from "next/link";
-import { LogOut } from "lucide-react";
 import { signOut } from "next-auth/react";
 import { usePathname } from "next/navigation";
 import { useState } from "react";
 
 export default function DashboardLayout({ children }) {
   const pathname = usePathname();
+  const [isCollapsed, setIsCollapsed] = useState(false);
   const [openCosts, setOpenCosts] = useState(false);
 
   const links = [
-    { href: "/dashboard", label: "Dashboard" },
-    { href: "/dashboard/cookies", label: "Cookies" },
-    { href: "/dashboard/delivery-settings", label: "Delivery Settings" },
-    { href: "/dashboard/sales", label: "Sales" },
-    { href: "/dashboard/sales/week", label: "Weekly Sales" },
-    { href: "/dashboard/customers", label: "Customers" },
-    { href: "/dashboard/expenses", label: "Expenses" },
-    { href: "/dashboard/promotions", label: "Promotions" },
+    {
+      href: "/dashboard",
+      label: "Dashboard",
+      icon: <LayoutDashboard size={20} />,
+    },
+    { href: "/dashboard/pos", label: "POS System", icon: <Store size={20} /> }, // Nuevo
+    {
+      href: "/dashboard/cookies",
+      label: "Cookies",
+      icon: <Cookie size={20} />,
+    },
+    {
+      href: "/dashboard/delivery-settings",
+      label: "Delivery",
+      icon: <Truck size={20} />,
+    },
+    {
+      href: "/dashboard/sales",
+      label: "Sales",
+      icon: <CircleDollarSign size={20} />,
+    },
+    {
+      href: "/dashboard/sales/week",
+      label: "Weekly Sales",
+      icon: <CalendarDays size={20} />,
+    },
+    {
+      href: "/dashboard/customers",
+      label: "Customers",
+      icon: <Users size={20} />,
+    },
+    {
+      href: "/dashboard/expenses",
+      label: "Expenses",
+      icon: <Receipt size={20} />,
+    },
+    {
+      href: "/dashboard/promotions",
+      label: "Promotions",
+      icon: <TicketPercent size={20} />,
+    },
   ];
 
   const costsLinks = [
@@ -30,79 +78,101 @@ export default function DashboardLayout({ children }) {
   ];
 
   return (
-    <div className="flex h-screen bg-gradient-to-br from-pink-50 via-white to-pink-100">
-      <aside className="fixed left-0 top-0 h-screen w-64 bg-white/80 backdrop-blur-sm border-r border-pink-200 p-6 flex flex-col shadow-xl">
-        <img
-          src="/images/banners/Glow Bake.png"
-          alt="Glow Bake Text"
-          className="h-16 w-auto mb-12 mx-auto drop-shadow-sm"
-        />
+    <div className="flex h-screen bg-gradient-to-br from-pink-50 via-white to-pink-100 transition-all duration-300">
+      <motion.aside
+        animate={{ width: isCollapsed ? 85 : 256 }}
+        className="fixed left-0 top-0 h-screen bg-white/80 backdrop-blur-md border-r border-pink-200 p-4 flex flex-col shadow-xl z-50 overflow-hidden"
+      >
+        {/* Toggle Button */}
+        <button
+          onClick={() => setIsCollapsed(!isCollapsed)}
+          className="absolute -right-0 top-10 bg-pink-500 text-white p-1 rounded-l-md shadow-lg hover:bg-pink-600 transition-colors"
+        >
+          {isCollapsed ? <ChevronRight size={18} /> : <ChevronLeft size={18} />}
+        </button>
 
-        <nav className="flex flex-col space-y-2 flex-1">
+        {/* Logo */}
+        <div className="h-16 flex items-center justify-center mb-8">
+          {isCollapsed ? (
+            <span className="text-2xl font-black text-pink-500 italic">GB</span>
+          ) : (
+            <img
+              src="/images/banners/Glow Bake.png"
+              alt="Glow Bake"
+              className="h-12 w-auto drop-shadow-sm"
+            />
+          )}
+        </div>
+
+        <nav className="flex flex-col space-y-1.5 flex-1 overflow-y-auto overflow-x-hidden no-scrollbar">
           {links.map((link) => {
             const active = pathname === link.href;
             return (
-              <motion.div
-                key={link.href}
-                whileHover={{ scale: 1.02, x: 6 }}
-                transition={{ type: "spring", stiffness: 300 }}
-              >
-                <Link
-                  href={link.href}
-                  className={`block py-2.5 px-4 rounded-xl text-sm font-medium transition-colors duration-300 ${
+              <Link key={link.href} href={link.href}>
+                <motion.div
+                  whileHover={{ x: 4 }}
+                  className={`flex items-center gap-4 py-3 px-4 rounded-xl text-sm font-medium transition-all duration-200 ${
                     active
-                      ? "bg-pink-500 text-white shadow-md"
-                      : "text-gray-700 hover:bg-pink-100 hover:text-pink-600"
+                      ? "bg-pink-500 text-white shadow-lg shadow-pink-200"
+                      : "text-gray-600 hover:bg-pink-50 hover:text-pink-600"
                   }`}
                 >
-                  {link.label}
-                </Link>
-              </motion.div>
+                  <div className="min-w-[20px]">{link.icon}</div>
+                  {!isCollapsed && (
+                    <span className="whitespace-nowrap">{link.label}</span>
+                  )}
+                </motion.div>
+              </Link>
             );
           })}
 
           {/* Submenú Costos */}
-          <div>
+          <div className="pt-2">
             <button
-              onClick={() => setOpenCosts(!openCosts)}
-              className={`w-full flex justify-between items-center py-2.5 px-4 rounded-xl text-sm font-medium transition-colors duration-300 ${
-                pathname.startsWith("/dashboard/ingredient-table") ||
-                pathname.startsWith("/dashboard/doughs") ||
-                pathname.startsWith("/dashboard/dough-inventory")
-                  ? "bg-pink-500 text-white shadow-md"
-                  : "text-gray-700 hover:bg-pink-100 hover:text-pink-600"
+              onClick={() => {
+                if (isCollapsed) setIsCollapsed(false);
+                setOpenCosts(!openCosts);
+              }}
+              className={`w-full flex items-center gap-4 py-3 px-4 rounded-xl text-sm font-medium transition-all ${
+                pathname.includes("ingredient") || pathname.includes("dough")
+                  ? "bg-pink-100 text-pink-600"
+                  : "text-gray-600 hover:bg-pink-50"
               }`}
             >
-              <span>Costs</span>
-              <motion.span animate={{ rotate: openCosts ? 90 : 0 }}>
-                ▶
-              </motion.span>
+              <div className="min-w-[20px]">
+                <Package size={20} />
+              </div>
+              {!isCollapsed && (
+                <>
+                  <span className="flex-1 text-left">Costs</span>
+                  <motion.span animate={{ rotate: openCosts ? 90 : 0 }}>
+                    <ChevronRight size={14} />
+                  </motion.span>
+                </>
+              )}
             </button>
 
             <AnimatePresence>
-              {openCosts && (
+              {openCosts && !isCollapsed && (
                 <motion.div
                   initial={{ opacity: 0, height: 0 }}
                   animate={{ opacity: 1, height: "auto" }}
                   exit={{ opacity: 0, height: 0 }}
-                  className="pl-6 mt-2 flex flex-col space-y-1"
+                  className="pl-10 mt-1 flex flex-col space-y-1"
                 >
-                  {costsLinks.map((link) => {
-                    const active = pathname === link.href;
-                    return (
-                      <Link
-                        key={link.href}
-                        href={link.href}
-                        className={`block py-2 px-3 rounded-lg text-sm transition-colors duration-300 ${
-                          active
-                            ? "bg-pink-200 text-pink-700 font-semibold"
-                            : "text-gray-600 hover:bg-pink-100 hover:text-pink-600"
-                        }`}
-                      >
-                        {link.label}
-                      </Link>
-                    );
-                  })}
+                  {costsLinks.map((link) => (
+                    <Link
+                      key={link.href}
+                      href={link.href}
+                      className={`block py-2 px-3 rounded-lg text-xs transition-colors ${
+                        pathname === link.href
+                          ? "text-pink-600 font-bold"
+                          : "text-gray-500 hover:text-pink-500"
+                      }`}
+                    >
+                      {link.label}
+                    </Link>
+                  ))}
                 </motion.div>
               )}
             </AnimatePresence>
@@ -110,29 +180,37 @@ export default function DashboardLayout({ children }) {
         </nav>
 
         {/* Logout */}
-        <motion.button
-          onClick={() => signOut({ callbackUrl: "/login" })}
-          whileHover={{ scale: 1.05, x: 6 }}
-          whileTap={{ scale: 0.95 }}
-          className="mt-auto flex items-center gap-2 py-2.5 px-4 rounded-xl text-sm font-semibold text-red-500 hover:text-red-700 hover:bg-red-50 transition-colors"
-        >
-          <LogOut size={16} />
-          Logout
-        </motion.button>
-        <p className="text-black text-sm">Created By Gian Machella</p>
-      </aside>
+        <div className="mt-auto pt-4 border-t border-pink-100">
+          <button
+            onClick={() => signOut({ callbackUrl: "/login" })}
+            className="w-full flex items-center gap-4 py-3 px-4 rounded-xl text-sm font-semibold text-red-500 hover:bg-red-50 transition-colors"
+          >
+            <div className="min-w-[20px]">
+              <LogOut size={20} />
+            </div>
+            {!isCollapsed && <span>Logout</span>}
+          </button>
+          {!isCollapsed && (
+            <p className="text-[10px] text-gray-400 mt-4 text-center uppercase tracking-widest font-bold">
+              By Gian Machella
+            </p>
+          )}
+        </div>
+      </motion.aside>
 
-      {/* Main content con padding a la izquierda para no tapar el sidebar */}
-      <main className="flex-1 p-10 h-screen overflow-y-auto ml-64">
+      {/* Main content dinámico */}
+      <motion.main
+        animate={{ marginLeft: isCollapsed ? 85 : 256 }}
+        className="flex-1 p-6 md:p-10 h-screen overflow-y-auto transition-all duration-300"
+      >
         <motion.div
           initial={{ opacity: 0, y: 15 }}
           animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.5 }}
           className="min-h-full"
         >
           {children}
         </motion.div>
-      </main>
+      </motion.main>
     </div>
   );
 }

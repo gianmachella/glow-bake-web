@@ -34,6 +34,7 @@ export async function POST(request) {
       <h1 style="color: white; margin: 0; font-style: italic;">GlowBake</h1>
     </div>
     <div style="padding: 30px; text-align: center; background-color: white;">
+     <img src="https://glowbake.com/images/logo-circle.png" alt="Glow Bake" style="max-width: 150px; margin-bottom: 20px;" />
       <h2 style="color: #333;">Your Market Coupon!</h2>
       
       <div style="background-color: #fff5f5; border: 1px solid #feb2b2; padding: 10px; border-radius: 8px; margin-bottom: 20px;">
