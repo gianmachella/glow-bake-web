@@ -13,7 +13,7 @@ model Cookie {
   price             Float
   shortDescription  String?            @db.Text
   description       String?            @db.Text
-  ingredients       String?            @db.Text // 👈 este lo puedes mantener por ahora si quieres texto libre
+  ingredients       String?            @db.Text
   visible           Boolean            @default(true)
   createdAt         DateTime           @default(now())
   updatedAt         DateTime           @updatedAt
@@ -21,10 +21,10 @@ model Cookie {
   images            Json?
   cost              Float              @default(0)
   isNew             Boolean            @default(false) @map("new")
+  cookieIngredients CookieIngredient[]
   doughInventories  DoughInventory[]
   recipes           Recipe[]
   saleItems         SaleItem[]
-  cookieIngredients CookieIngredient[] // 👈 NUEVO
 }
 
 model Ingredient {
@@ -37,9 +37,9 @@ model Ingredient {
   unitQuantity        Float
   unitType            Unit
   packages            Int                   @default(1)
-  recipeIngredients   RecipeIngredient[]
   BaseDoughIngredient BaseDoughIngredient[]
   cookieIngredients   CookieIngredient[]
+  recipeIngredients   RecipeIngredient[]
 }
 
 model BaseDough {
@@ -77,15 +77,14 @@ model BaseDoughIngredient {
 }
 
 model CookieIngredient {
-  id           String @id @default(cuid())
+  id           String     @id @default(cuid())
   cookieId     String
   ingredientId String
   quantityUsed Float
   cost         Float
   unit         String
-
-  cookie     Cookie     @relation(fields: [cookieId], references: [id])
-  ingredient Ingredient @relation(fields: [ingredientId], references: [id])
+  cookie       Cookie     @relation(fields: [cookieId], references: [id])
+  ingredient   Ingredient @relation(fields: [ingredientId], references: [id])
 
   @@index([cookieId], map: "CookieIngredient_cookieId_fkey")
   @@index([ingredientId], map: "CookieIngredient_ingredientId_fkey")
@@ -174,6 +173,23 @@ model User {
   createdAt DateTime @default(now())
 }
 
+model DeliverySettings {
+  id             Int           @id @default(1)
+  enableSaturday Boolean       @default(true)
+  extraDays      Json
+  specialDates   SpecialDate[]
+}
+
+model SpecialDate {
+  id         Int              @id @default(autoincrement())
+  productId  String
+  date       DateTime
+  settingsId Int
+  settings   DeliverySettings @relation(fields: [settingsId], references: [id])
+
+  @@index([settingsId], map: "SpecialDate_settingsId_fkey")
+}
+
 enum Unit {
   g      @map("G")
   kg     @map("KG")
@@ -193,19 +209,10 @@ enum Unit {
   pack   @map("PACK")
 }
 
-model DeliverySettings {
-  id             Int                @id @default(1)
-  enableSaturday Boolean            @default(true)
-  extraDays      Json               @default("[]")
-  specialDates   SpecialDate[]
+model Promotion {
+  id        String   @id @default(uuid())
+  email     String   @unique
+  used      Boolean  @default(false)
+  usedAt    DateTime?
+  createdAt DateTime @default(now())
 }
-
-model SpecialDate {
-  id         Int      @id @default(autoincrement())
-  productId  String
-  date       DateTime
-  settings   DeliverySettings @relation(fields: [settingsId], references: [id])
-  settingsId Int
-}
-
-

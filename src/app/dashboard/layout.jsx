@@ -20,6 +20,7 @@ export default function DashboardLayout({ children }) {
     { href: "/dashboard/sales/week", label: "Weekly Sales" },
     { href: "/dashboard/customers", label: "Customers" },
     { href: "/dashboard/expenses", label: "Expenses" },
+    { href: "/dashboard/promotions", label: "Promotions" },
   ];
 
   const costsLinks = [

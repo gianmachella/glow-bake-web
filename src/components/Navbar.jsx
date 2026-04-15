@@ -48,6 +48,12 @@ export default function Navbar() {
               Menu
             </Link>
             <Link
+              href="/#promotions"
+              className="text-sm text-gray-700 hover:text-pink-600"
+            >
+              Promotions
+            </Link>
+            <Link
               href="/#testimonials"
               className="text-sm text-gray-700 hover:text-pink-600"
             >
