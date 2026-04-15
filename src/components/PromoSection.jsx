@@ -50,7 +50,10 @@ export default function PromoSection() {
   };
 
   return (
-    <section className="py-24 bg-gradient-to-b from-white to-pink-50 relative overflow-hidden">
+    <section
+      id="promotions"
+      className="py-24 bg-gradient-to-b from-white to-pink-50 relative overflow-hidden"
+    >
       {/* Background Decor */}
       <div className="absolute top-0 left-0 w-full h-full overflow-hidden -z-0 pointer-events-none">
         <div className="absolute top-1/4 -left-10 w-40 h-40 bg-pink-200 rounded-full blur-[80px] opacity-40"></div>
