@@ -17,33 +17,7 @@ async function recalcCookieCost(cookieId) {
   return totalCost;
 }
 
-// Conversión de unidades
-function convertQuantity(value, fromUnit, toUnit) {
-  const factors = {
-    G: 1,
-    KG: 1000,
-    MG: 0.001,
-    LB: 453.592,
-    OZ: 28.3495,
-    ML: 1,
-    L: 1000,
-    FLOZ: 29.5735,
-    CUP: 240,
-    TBSP: 15,
-    TSP: 5,
-    PT: 473.176,
-    QT: 946.353,
-    GAL: 3785.41,
-    UNIT: 1,
-    PACK: 1,
-  };
-
-  if (!factors[fromUnit] || !factors[toUnit]) {
-    throw new Error(`Conversión no soportada: ${fromUnit} -> ${toUnit}`);
-  }
-
-  return (value * factors[fromUnit]) / factors[toUnit];
-}
+import { convertQuantity } from "@/utils/convertQuantity";
 
 // GET: lista de ingredientes de la receta de una cookie
 export async function GET(req, { params }) {

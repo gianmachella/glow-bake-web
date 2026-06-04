@@ -1,34 +1,33 @@
 "use client";
 
 import { Eye, EyeOff, Lock, Mail } from "lucide-react";
-
 import { motion } from "framer-motion";
-import { useRouter } from "next/navigation";
+import { signIn } from "next-auth/react";
 import { useState } from "react";
 
 export default function LoginPage() {
   const [form, setForm] = useState({ email: "", password: "" });
   const [error, setError] = useState("");
   const [showPassword, setShowPassword] = useState(false);
-  const router = useRouter();
+  const [loading, setLoading] = useState(false);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     setError("");
+    setLoading(true);
 
-    const res = await fetch("/api/login", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(form),
-      credentials: "include",
+    const result = await signIn("credentials", {
+      email: form.email.trim().toLowerCase(),
+      password: form.password,
+      redirect: false,
     });
 
-    const data = await res.json();
+    setLoading(false);
 
-    if (res.ok && data.success) {
-      router.push("/dashboard");
+    if (result?.ok) {
+      window.location.href = "/dashboard";
     } else {
-      setError(data.error || "⚠️ Invalid credentials");
+      setError("⚠️ Invalid email or password");
     }
   };
 
@@ -100,10 +99,11 @@ export default function LoginPage() {
 
         <motion.button
           type="submit"
+          disabled={loading}
           whileTap={{ scale: 0.95 }}
-          className="w-full bg-gradient-to-r from-pink-500 to-pink-600 text-white font-semibold p-3 rounded-xl shadow-lg hover:from-pink-600 hover:to-pink-700 transition-all"
+          className="w-full bg-gradient-to-r from-pink-500 to-pink-600 text-white font-semibold p-3 rounded-xl shadow-lg hover:from-pink-600 hover:to-pink-700 transition-all disabled:opacity-60 disabled:cursor-not-allowed"
         >
-          Sign in
+          {loading ? "Signing in..." : "Sign in"}
         </motion.button>
 
         <p className="text-xs text-center text-gray-500">

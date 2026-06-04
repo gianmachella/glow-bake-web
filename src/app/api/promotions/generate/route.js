@@ -11,8 +11,9 @@ export async function POST(request) {
   try {
     const { email } = await request.json();
 
-    if (!email) {
-      return NextResponse.json({ error: "Email is required" }, { status: 400 });
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!email || !emailRegex.test(email)) {
+      return NextResponse.json({ error: "Valid email is required" }, { status: 400 });
     }
 
     // 1. Guardar en la Base de Datos

@@ -1,36 +1,5 @@
 import prisma from "@/lib/prisma";
-
-// 🔹 Conversión de unidades a una base (gramos o mililitros)
-function convertQuantity(value, fromUnit, toUnit, ingredientName = "") {
-  const factors = {
-    g: 1,
-    kg: 1000,
-    mg: 0.001,
-    lb: 453.592,
-    oz: 28.3495,
-    ml: 1,
-    l: 1000,
-    cup: 240,
-    tbsp: 15,
-    tsp: 5,
-    unidad: 1,
-    pack: 1,
-  };
-
-  fromUnit = fromUnit?.toLowerCase();
-  toUnit = toUnit?.toLowerCase();
-
-  if (!fromUnit) {
-    throw new Error(`⚠️ Falta seleccionar unidad para "${ingredientName}"`);
-  }
-
-  if (!factors[fromUnit] || !factors[toUnit]) {
-    throw new Error(`❌ Conversión no soportada: ${fromUnit} -> ${toUnit}`);
-  }
-
-  const baseValue = value * factors[fromUnit];
-  return baseValue / factors[toUnit];
-}
+import { convertQuantity } from "@/utils/convertQuantity";
 
 // =======================
 // GET: Listar masas base

@@ -12,36 +12,26 @@ export const authOptions = {
       },
       async authorize(credentials) {
         if (!credentials?.email || !credentials?.password) {
-          console.log("❌ Faltan credenciales:", credentials);
           return null;
         }
 
         const email = credentials.email.trim().toLowerCase();
         const plainPassword = credentials.password;
 
-        console.log("👉 Intento de login con:", { email, plainPassword });
-
         try {
           const user = await prisma.user.findUnique({
             where: { email },
           });
 
-          console.log("🔍 Usuario encontrado en DB:", user);
-
           if (!user) {
-            console.log("❌ Usuario no encontrado:", email);
             return null;
           }
 
           const isValid = await bcrypt.compare(plainPassword, user.password);
-          console.log("🔑 ¿Password válida?", isValid);
 
           if (!isValid) {
-            console.log("❌ Password incorrecto para:", email);
             return null;
           }
-
-          console.log("✅ Login correcto para", user.email);
 
           return {
             id: user.id,
@@ -65,22 +55,18 @@ export const authOptions = {
   callbacks: {
     async jwt({ token, user }) {
       if (user) {
-        console.log("👉 Callback JWT recibió user:", user);
         token.id = user.id;
         token.role = user.role;
         token.email = user.email;
       }
-      console.log("🔑 Token final:", token);
       return token;
     },
     async session({ session, token }) {
-      console.log("👉 Callback SESSION recibió token:", token);
       session.user = {
         id: token.id,
         email: token.email,
         role: token.role,
       };
-      console.log("✅ Session final:", session);
       return session;
     },
   },

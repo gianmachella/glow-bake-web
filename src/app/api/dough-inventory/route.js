@@ -36,28 +36,28 @@ export async function POST(req) {
       where: { cookieId },
     });
 
-    // Descontar ingredientes ×8
-    for (const ing of ingredients) {
-      const totalToConsume = ing.quantityUsed * 8;
-      await prisma.ingredient.update({
-        where: { id: ing.ingredientId },
-        data: { remaining: { decrement: totalToConsume } },
-      });
-    }
+    // Descontar ingredientes ×8 y actualizar inventario en una sola transacción
+    dough = await prisma.$transaction(async (tx) => {
+      for (const ing of ingredients) {
+        await tx.ingredient.update({
+          where: { id: ing.ingredientId },
+          data: { remaining: { decrement: ing.quantityUsed * 8 } },
+        });
+      }
 
-    // Actualizar o crear DoughInventory
-    if (dough) {
-      dough = await prisma.doughInventory.update({
-        where: { id: dough.id },
-        data: { quantity: { increment: 8 } },
-        include: { cookie: true },
-      });
-    } else {
-      dough = await prisma.doughInventory.create({
-        data: { cookieId, quantity: 8 },
-        include: { cookie: true },
-      });
-    }
+      if (dough) {
+        return tx.doughInventory.update({
+          where: { id: dough.id },
+          data: { quantity: { increment: 8 } },
+          include: { cookie: true },
+        });
+      } else {
+        return tx.doughInventory.create({
+          data: { cookieId, quantity: 8 },
+          include: { cookie: true },
+        });
+      }
+    });
 
     return new Response(JSON.stringify(dough), { status: 200 });
   } catch (err) {
@@ -88,23 +88,22 @@ export async function PATCH(req) {
       );
     }
 
-    // Restar 1
-    await prisma.doughInventory.update({
-      where: { id: dough.id },
-      data: { quantity: { decrement: 1 } },
-    });
-
-    // Devolver ingredientes ×1
     const cookieIngredients = await prisma.cookieIngredient.findMany({
       where: { cookieId },
     });
 
-    for (const ing of cookieIngredients) {
-      await prisma.ingredient.update({
-        where: { id: ing.ingredientId },
-        data: { remaining: { increment: ing.quantityUsed } },
+    await prisma.$transaction(async (tx) => {
+      await tx.doughInventory.update({
+        where: { id: dough.id },
+        data: { quantity: { decrement: 1 } },
       });
-    }
+      for (const ing of cookieIngredients) {
+        await tx.ingredient.update({
+          where: { id: ing.ingredientId },
+          data: { remaining: { increment: ing.quantityUsed } },
+        });
+      }
+    });
 
     // Devolver cookie con stock actualizado
     const updatedCookie = await prisma.cookie.findUnique({
@@ -143,23 +142,22 @@ export async function DELETE(req) {
       return new Response("Not enough frozen cookies", { status: 400 });
     }
 
-    // Devolver ingredientes ×8
     const cookieIngredients = await prisma.cookieIngredient.findMany({
       where: { cookieId },
     });
 
-    for (const ing of cookieIngredients) {
-      await prisma.ingredient.update({
-        where: { id: ing.ingredientId },
-        data: { remaining: { increment: ing.quantityUsed * 8 } },
+    const updated = await prisma.$transaction(async (tx) => {
+      for (const ing of cookieIngredients) {
+        await tx.ingredient.update({
+          where: { id: ing.ingredientId },
+          data: { remaining: { increment: ing.quantityUsed * 8 } },
+        });
+      }
+      return tx.doughInventory.update({
+        where: { id: dough.id },
+        data: { quantity: { decrement: 8 } },
+        include: { cookie: true },
       });
-    }
-
-    // Restar del inventario
-    const updated = await prisma.doughInventory.update({
-      where: { id: dough.id },
-      data: { quantity: { decrement: 8 } },
-      include: { cookie: true },
     });
 
     return new Response(JSON.stringify(updated), { status: 200 });

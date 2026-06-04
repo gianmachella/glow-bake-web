@@ -8,7 +8,7 @@ export async function POST(req) {
     return new Response("Invalid input", { status: 400 });
   }
 
-  const resend = new Resend("re_19Q7Hfn8_M244cDRgMMCpuYmRCju4og25");
+  const resend = new Resend(process.env.RESEND_API_KEY);
 
   const text = `
 New contact message from Glow Bake
@@ -29,7 +29,6 @@ ${message}
       reply_to: email,
     });
 
-    console.log("Contact email sent:", response);
     return new Response("Message sent", { status: 200 });
   } catch (error) {
     console.error("Resend error:", error);

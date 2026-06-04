@@ -210,9 +210,49 @@ enum Unit {
 }
 
 model Promotion {
-  id        String   @id @default(uuid())
-  email     String   @unique
-  used      Boolean  @default(false)
+  id        String    @id @default(uuid())
+  email     String    @unique
+  used      Boolean   @default(false)
   usedAt    DateTime?
-  createdAt DateTime @default(now())
+  createdAt DateTime  @default(now())
+}
+
+model Announcement {
+  id         String    @id @default(cuid())
+  title      String
+  content    String    @db.Text
+  image      String?
+  startDate  DateTime?
+  endDate    DateTime?
+  enabled    Boolean   @default(true)
+  alwaysShow Boolean   @default(false)
+  createdAt  DateTime  @default(now())
+  updatedAt  DateTime  @updatedAt
+}
+
+model Campaign {
+  id            String       @id @default(cuid())
+  name          String
+  description   String?      @db.Text
+  discountType  DiscountType
+  discountValue Float
+  image         String?
+  startDate     DateTime?
+  endDate       DateTime?
+  active        Boolean      @default(true)
+  targetType    TargetType   @default(ALL)
+  targetEmails  Json?
+  couponCode    String?      @unique
+  createdAt     DateTime     @default(now())
+  updatedAt     DateTime     @updatedAt
+}
+
+enum DiscountType {
+  PERCENTAGE
+  FIXED
+}
+
+enum TargetType {
+  ALL
+  SPECIFIC
 }

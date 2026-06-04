@@ -9,6 +9,7 @@ import {
   Cookie,
   LayoutDashboard,
   LogOut,
+  Megaphone,
   Package,
   Receipt,
   Store,
@@ -68,6 +69,11 @@ export default function DashboardLayout({ children }) {
       href: "/dashboard/promotions",
       label: "Promotions",
       icon: <TicketPercent size={20} />,
+    },
+    {
+      href: "/dashboard/announcements",
+      label: "Announcements",
+      icon: <Megaphone size={20} />,
     },
   ];
 

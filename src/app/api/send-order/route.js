@@ -122,7 +122,7 @@ export async function POST(req) {
         <hr />
         <p>Please send your payment to:</p>
         <p><strong>Zelle:</strong> 945-400-5808</p>
-        <p><strong>Venmo:</strong> @EleanaMachella</p>
+        <p><strong>Venmo:</strong> NO MORE </p>
         <p style="font-weight: bold; color: #d63384;">Thank you for choosing Glow Bake!</p>
       </div>
     `;
