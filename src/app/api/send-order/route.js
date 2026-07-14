@@ -1,104 +1,237 @@
 // app/api/send-order/route.js
 import { Resend } from "resend";
+import { z } from "zod";
+import prisma from "@/lib/prisma";
+import { parseJsonBody } from "@/lib/validate";
+import { apiError } from "@/lib/apiResponse";
+import { computeLineItems } from "@/lib/discounts";
+import { isWithinDateWindow, startOfDay } from "@/lib/dateWindow";
+
+const orderItemSchema = z.object({
+  id: z.string().min(1),
+  name: z.string().min(1),
+  quantity: z.number().int().positive(),
+  price: z.number().nonnegative(),
+  flavors: z.record(z.string(), z.number()).optional(),
+});
+
+const orderSchema = z.object({
+  name: z.string().trim().min(1),
+  lastName: z.string().trim().min(1),
+  email: z.string().trim().email(),
+  phone: z.string().trim().min(1),
+  address: z.string().trim().optional(),
+  deliveryMethod: z.enum(["Pickup", "Delivery"]),
+  deliveryDay: z.string().min(1),
+  notes: z.string().optional(),
+  total: z.number().nonnegative(),
+  deliveryFee: z.number().nonnegative().optional().default(0),
+  items: z.array(orderItemSchema).min(1),
+  couponCode: z.string().trim().min(1).optional(),
+});
 
 export async function POST(req) {
-  const body = await req.json();
-  const {
-    name,
-    lastName,
-    email,
-    phone,
-    address,
-    deliveryMethod,
-    deliveryDay,
-    notes,
-    total,
-    items,
-    deliveryFee = 0,
-  } = body;
+  try {
+    const { data, response } = await parseJsonBody(req, orderSchema);
+    if (response) return response;
+    const {
+      name,
+      lastName,
+      email,
+      phone,
+      address,
+      deliveryMethod,
+      deliveryDay,
+      notes,
+      items,
+      deliveryFee,
+      couponCode,
+    } = data;
 
-  console.log("🛒 Items recibidos:", items);
+    // 🔒 Recompute prices/total from the database — never trust client-submitted
+    // per-item price, so automatic cookie discounts (and the base price) can't be spoofed.
+    const cookieIds = items.map((item) => item.id);
+    const cookies = await prisma.cookie.findMany({
+      where: { id: { in: cookieIds } },
+    });
+    const cookieById = new Map(cookies.map((c) => [c.id, c]));
 
-  if (!email || !email.includes("@")) {
-    return new Response("Invalid email", { status: 400 });
-  }
+    const missingIds = cookieIds.filter((id) => !cookieById.has(id));
+    if (missingIds.length > 0) {
+      return apiError("One or more items in your cart are no longer available", 400);
+    }
 
-  // 📧 Emails
-  const resend = new Resend(process.env.RESEND_API_KEY);
+    const now = new Date();
+    const activeAutoDiscounts = await prisma.autoDiscount.findMany({
+      where: {
+        cookieId: { in: cookieIds },
+        active: true,
+        OR: [{ startDate: null }, { startDate: { lte: now } }],
+        AND: [{ OR: [{ endDate: null }, { endDate: { gte: startOfDay(now) } }] }],
+      },
+    });
+    const discountsByCookieId = activeAutoDiscounts.reduce((acc, d) => {
+      (acc[d.cookieId] ||= []).push(d);
+      return acc;
+    }, {});
 
-  // Lista de productos
-  const itemList = items
-    .map((item) => {
-      const flavorList =
-        item.flavors && Object.keys(item.flavors).length > 0
-          ? `<ul style="margin: 4px 0 10px 0; padding-left: 1em; font-size: 14px;">
-              ${Object.entries(item.flavors)
-                .filter(([_, qty]) => qty > 0)
-                .map(([flavor, qty]) => `<li>${flavor}: ${qty}</li>`)
-                .join("")}
-            </ul>`
-          : "";
+    // 🎟️ Validate a claimed web-promotion coupon code, if one was submitted —
+    // never trust the discount the client thinks applies, re-check it here.
+    let claim = null;
+    const globalDiscounts = [];
+    if (couponCode) {
+      claim = await prisma.webPromotionClaim.findUnique({
+        where: { code: couponCode.trim().toUpperCase() },
+        include: { webPromotion: true },
+      });
+      if (!claim) return apiError("Invalid coupon code", 400);
+      if (claim.used) return apiError("This coupon code has already been used", 400);
 
-      return `<li style="margin-bottom: 10px;">
-                <strong>${item.quantity}</strong> x ${item.name} - $${item.price.toFixed(2)}
-                ${flavorList}
-              </li>`;
-    })
-    .join("");
+      const wp = claim.webPromotion;
+      const promotionValid = wp.active && isWithinDateWindow(wp.startDate, wp.endDate, now);
+      if (!promotionValid) return apiError("This promotion is no longer active", 400);
 
-  // Delivery separado
-  const deliveryItem =
-    deliveryMethod === "Delivery"
-      ? `<li style="margin-bottom: 10px; font-weight: bold; color: #d63384;">
-           Delivery Fee - $${deliveryFee.toFixed(2)}
-         </li>`
-      : "";
-
-  const grandTotal = total + (deliveryMethod === "Delivery" ? deliveryFee : 0);
-
-  // 📧 Cliente
-  const htmlMessage = `
-    <div style="font-family: Arial, sans-serif; max-width: 600px; margin: auto; border: 1px solid #eee; padding: 20px; border-radius: 10px;">
-      <div style="text-align: center;">
-        <img src="https://glowbake.com/images/logo-circle.png" alt="Glow Bake" style="max-width: 200px; margin-bottom: 20px;" />
-        <h2 style="color: #d63384;">Thank you for your order, ${name} ${lastName}!</h2>
-      </div>
-      <p><strong>Email:</strong> ${email}</p>
-      <p><strong>Phone:</strong> ${phone}</p>
-      <p><strong>Method:</strong> ${deliveryMethod}</p>
-      <p><strong>Address:</strong> ${
-        deliveryMethod === "Pickup"
-          ? "5614 Mystic Glade Way, Princeton, TX 75407"
-          : address
-      }</p>
-      <p><strong>${deliveryMethod} Day:</strong> ${deliveryDay}</p>
-      <p><strong>Notes:</strong> ${notes || "None"}</p>
-      <h3>Your Order:</h3>
-      <ul>
-        ${itemList}
-        ${deliveryItem}
-      </ul>
-      <p style="font-size: 22px; font-weight: bold; margin-top: 15px; color: #000;">
-        Total: $${grandTotal.toFixed(2)}
-      </p>
-      ${
-        deliveryMethod === "Delivery"
-          ? `<p style="margin-top: 15px; color: #d63384;">
-              🚚 Remember, deliveries are made on the selected day starting at 4:30 pm.<br/>
-              The exact delivery time will depend on the number of orders that day and the distance.
-             </p>`
-          : ""
+      const discountEntry = {
+        active: true,
+        discountType: wp.discountType,
+        discountValue: wp.discountValue,
+        minQuantity: wp.minQuantity,
+      };
+      if (wp.cookieId) {
+        (discountsByCookieId[wp.cookieId] ||= []).push(discountEntry);
+      } else {
+        globalDiscounts.push(discountEntry); // no cookieId = applies to every cookie
       }
-      <hr />
-      <p>Please send your payment to:</p>
-      <p><strong>Zelle:</strong> 945-400-5808</p>
-      <p><strong>Venmo:</strong> @EleanaMachella</p>
-      <p style="font-weight: bold; color: #d63384;">Thank you for choosing Glow Bake!</p>
-    </div>
-  `;
+    }
 
-  // 📧 Owner
-  const ownerMessage = `
+    const { items: computedItems, subtotal } = computeLineItems(
+      items.map((item) => ({ ...item, price: cookieById.get(item.id).price })),
+      discountsByCookieId,
+      globalDiscounts,
+      now
+    );
+
+    const total = subtotal;
+
+    // 1️⃣ Crear o conectar cliente, crear venta con items, y marcar el cupón como
+    // usado — todo en una sola transacción para que un cupón no pueda reutilizarse
+    // en una condición de carrera.
+    const sale = await prisma.$transaction(async (tx) => {
+      const customer = await tx.customer.upsert({
+        where: { email },
+        update: { name, lastName, phone, address },
+        create: { name, lastName, email, phone, address },
+      });
+
+      const newSale = await tx.sale.create({
+        data: {
+          customer: { connect: { id: customer.id } },
+          total: total + (deliveryMethod === "Delivery" ? deliveryFee : 0),
+          deliveryDay, // 👈 ahora sí es válido
+          deliveryMethod,
+          items: {
+            create: computedItems.map((item) => ({
+              cookieId: item.id,
+              quantity: item.quantity,
+              price: item.unitPrice,
+            })),
+          },
+        },
+        include: {
+          items: {
+            include: { cookie: true },
+          },
+        },
+      });
+
+      if (claim) {
+        const redeemed = await tx.webPromotionClaim.updateMany({
+          where: { id: claim.id, used: false },
+          data: { used: true, usedAt: new Date() },
+        });
+        if (redeemed.count === 0) {
+          throw new Error("COUPON_ALREADY_USED");
+        }
+      }
+
+      return newSale;
+    });
+
+    // 📧 Emails
+    const resend = new Resend(process.env.RESEND_API_KEY);
+
+    const itemList = computedItems
+      .map((item) => {
+        const flavorList =
+          item.flavors && Object.keys(item.flavors).length > 0
+            ? `<ul style="margin: 4px 0 10px 0; padding-left: 1em; font-size: 14px;">
+                ${Object.entries(item.flavors)
+                  .filter(([_, qty]) => qty > 0)
+                  .map(([flavor, qty]) => `<li>${flavor}: ${qty}</li>`)
+                  .join("")}
+              </ul>`
+            : "";
+
+        return `<li style="margin-bottom: 10px;">
+                  <strong>${item.quantity}</strong> x ${item.name} - $${item.unitPrice.toFixed(2)}
+                  ${flavorList}
+                </li>`;
+      })
+      .join("");
+
+    const deliveryItem =
+      deliveryMethod === "Delivery"
+        ? `<li style="margin-bottom: 10px; font-weight: bold; color: #d63384;">
+             Delivery Fee - $${deliveryFee.toFixed(2)}
+           </li>`
+        : "";
+
+    const grandTotal =
+      total + (deliveryMethod === "Delivery" ? deliveryFee : 0);
+
+    // 📧 Cliente
+    const htmlMessage = `
+      <div style="font-family: Arial, sans-serif; max-width: 600px; margin: auto; border: 1px solid #eee; padding: 20px; border-radius: 10px;">
+        <div style="text-align: center;">
+          <img src="https://glowbake.com/images/logo-circle.png" alt="Glow Bake" style="max-width: 200px; margin-bottom: 20px;" />
+          <h2 style="color: #d63384;">Thank you for your order, ${name} ${lastName}!</h2>
+        </div>
+        <p><strong>Email:</strong> ${email}</p>
+        <p><strong>Phone:</strong> ${phone}</p>
+        <p><strong>Method:</strong> ${deliveryMethod}</p>
+        <p><strong>Address:</strong> ${
+          deliveryMethod === "Pickup"
+            ? "5614 Mystic Glade Way, Princeton, TX 75407"
+            : address
+        }</p>
+        <p><strong>${deliveryMethod} Day:</strong> ${deliveryDay}</p>
+        <p><strong>Notes:</strong> ${notes || "None"}</p>
+        <h3>Your Order:</h3>
+        <ul>
+          ${itemList}
+          ${deliveryItem}
+        </ul>
+        <p style="font-size: 22px; font-weight: bold; margin-top: 15px; color: #000;">
+          Total: $${grandTotal.toFixed(2)}
+        </p>
+        ${
+          deliveryMethod === "Delivery"
+            ? `<p style="margin-top: 15px; color: #d63384;">
+                🚚 Remember, deliveries are made on the selected day starting at 4:30 pm.<br/>
+                The exact delivery time will depend on the number of orders that day and the distance.
+               </p>`
+            : ""
+        }
+        <hr />
+        <p>Please send your payment to:</p>
+        <p><strong>Zelle:</strong> 945-400-5808</p>
+        <p><strong>Venmo:</strong> NO MORE </p>
+        <p style="font-weight: bold; color: #d63384;">Thank you for choosing Glow Bake!</p>
+      </div>
+    `;
+
+    // 📧 Owner
+    const ownerMessage = `
 New order received!
 
 Customer: ${name} ${lastName}  
@@ -106,15 +239,15 @@ Email: ${email}
 Phone: ${phone}  
 Method: ${deliveryMethod}  
 Address: ${
-    deliveryMethod === "Pickup"
-      ? "5614 Mystic Glade Way, Princeton, TX 75407"
-      : address
-  }  
+      deliveryMethod === "Pickup"
+        ? "5614 Mystic Glade Way, Princeton, TX 75407"
+        : address
+    }  
 ${deliveryMethod} Day: ${deliveryDay}
 Notes: ${notes || "None"}
 
 Order:
-${items
+${computedItems
   .map((item) => {
     const flavors =
       item.flavors && Object.keys(item.flavors).length > 0
@@ -123,7 +256,7 @@ ${items
             .map(([flavor, qty]) => `    - ${flavor}: ${qty}`)
             .join("\n")
         : "";
-    return `- ${item.quantity} x ${item.name} ($${item.price.toFixed(2)})${
+    return `- ${item.quantity} x ${item.name} ($${item.unitPrice.toFixed(2)})${
       flavors ? "\n" + flavors : ""
     }`;
   })
@@ -132,26 +265,34 @@ ${deliveryMethod === "Delivery" ? `- Delivery Fee: $${deliveryFee.toFixed(2)}` :
 Total: $${grandTotal.toFixed(2)}
 `;
 
-  try {
-    await resend.emails.send({
+    const { error: customerEmailError } = await resend.emails.send({
       from: "Glow Bake <hello@glowbake.com>",
       to: email,
       subject: "Your Glow Bake Order Confirmation",
       html: htmlMessage,
       reply_to: "glowbakesosweet@gmail.com",
     });
+    if (customerEmailError) {
+      console.error("Resend error (customer email):", { name: customerEmailError.name, message: customerEmailError.message, statusCode: customerEmailError.statusCode });
+    }
 
-    await resend.emails.send({
+    const { error: ownerEmailError } = await resend.emails.send({
       from: "Glow Bake <hello@glowbake.com>",
       to: "glowbakesosweet@gmail.com",
       subject: `📦 New Order Received - ${name} `,
       text: ownerMessage,
       reply_to: "glowbakesosweet@gmail.com",
     });
+    if (ownerEmailError) {
+      console.error("Resend error (owner email):", { name: ownerEmailError.name, message: ownerEmailError.message, statusCode: ownerEmailError.statusCode });
+    }
 
-    return new Response("Order processed and emails sent!", { status: 200 });
+    return new Response(JSON.stringify(sale), { status: 200 });
   } catch (err) {
-    console.error("Resend error:", err?.response?.data || err);
-    return new Response("Error sending emails", { status: 500 });
+    if (err.message === "COUPON_ALREADY_USED") {
+      return apiError("This coupon code has already been used", 400);
+    }
+    console.error("❌ Error processing order:", err);
+    return new Response("Error processing order", { status: 500 });
   }
 }

@@ -41,3 +41,44 @@ body {
 html {
   scroll-behavior: smooth;
 }
+
+/* Form inputs in this app are styled for light backgrounds regardless of the
+   visitor's OS color scheme. Most inputs across the app don't set an explicit
+   text color, so they inherit `body`'s color — which turns near-white (and
+   invisible on a white field) once the dark-scheme `--foreground` above
+   kicks in. This covers the actual typed/selected value in every input,
+   textarea, and select. It lives in `@layer base` (the same layer Tailwind's
+   own reset uses) so any component that sets an explicit text-color utility
+   class (e.g. `text-gray-900`) still wins — this is only the fallback. */
+@layer base {
+  input,
+  textarea,
+  select {
+    color: #111827;
+  }
+
+  /* Placeholder text follows the same currentColor cascade but should read
+     as muted, not the same weight as a real value — give it its own shade. */
+  input::placeholder,
+  textarea::placeholder {
+    color: #6b7280;
+    opacity: 1;
+  }
+
+  /* <select> has no ::placeholder pseudo-element — the default "Select a..."
+     option many forms use as a placeholder is just plain option text. */
+  select option {
+    color: #111827;
+  }
+}
+
+::-webkit-scrollbar {
+  width: 4px; /* super fina */
+}
+::-webkit-scrollbar-thumb {
+  background-color: #f9a8d4; /* rosa clarito */
+  border-radius: 9999px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}

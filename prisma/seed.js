@@ -1,84 +1,102 @@
 import { PrismaClient } from "@prisma/client";
-
 const prisma = new PrismaClient();
 
 async function main() {
-  console.log("🌱 Starting seed...");
-
-  // Ingredientes
-  const flour = await prisma.ingredient.create({
-    data: { name: "Harina", unit: "gramos", unitPrice: 0.002 },
-  });
-  const sugar = await prisma.ingredient.create({
-    data: { name: "Azúcar", unit: "gramos", unitPrice: 0.003 },
-  });
-  const nutella = await prisma.ingredient.create({
-    data: { name: "Nutella", unit: "gramos", unitPrice: 0.05 },
+  // --- Ingredientes ---
+  const harina = await prisma.ingredient.create({
+    data: {
+      name: "Harina de trigo",
+      unitType: "KG",
+      unitQuantity: 25,
+      price: 18.0,
+      remaining: 25,
+    },
   });
 
-  // Cookie con imágenes
+  const huevo = await prisma.ingredient.create({
+    data: {
+      name: "Huevo",
+      unitType: "UNIT",
+      unitQuantity: 12,
+      price: 2.8,
+      remaining: 12,
+    },
+  });
+
+  const mantequilla = await prisma.ingredient.create({
+    data: {
+      name: "Mantequilla",
+      unitType: "LB",
+      unitQuantity: 2,
+      price: 5.2,
+      remaining: 2,
+    },
+  });
+
+  // --- Masa base ---
+  const masaBase = await prisma.baseDough.create({
+    data: {
+      name: "Masa básica vainilla",
+      ingredients: {
+        create: [
+          {
+            ingredientId: harina.id,
+            quantityUsed: 1, // 1 kg
+            cost: (18 / 25) * 1, // costo proporcional
+          },
+          {
+            ingredientId: huevo.id,
+            quantityUsed: 2, // 2 huevos
+            cost: (2.8 / 12) * 2,
+          },
+          {
+            ingredientId: mantequilla.id,
+            quantityUsed: 0.5, // 0.5 lb
+            cost: (5.2 / 2) * 0.5,
+          },
+        ],
+      },
+    },
+  });
+
+  // --- Cookie ---
   const cookie = await prisma.cookie.create({
     data: {
-      name: "Nutella Cookie",
-      price: 2.5,
-      shortDescription: "Stuffed with smooth chocolate-hazelnut magic.",
-      description:
-        "A cookie filled with creamy Nutella that melts into every bite.",
-      ingredients: "Harina, Azúcar, Nutella",
-      image: "https://placehold.co/300x300.png", // principal
-      images: [
-        "https://placehold.co/300x300.png",
-        "https://placehold.co/400x400.png",
-      ],
+      name: "Chocolate Chip",
+      price: 3.5,
+      shortDescription: "Classic cookie with chocolate chips",
+      description: "Soft, chewy, and filled with semi-sweet chocolate chips.",
+      cost: 1.2, // costo aproximado
+      recipes: {
+        create: {
+          baseDoughId: masaBase.id,
+          ingredients: {
+            create: [
+              {
+                ingredientId: mantequilla.id,
+                quantityUsed: 0.1, // extra mantequilla
+                cost: (5.2 / 2) * 0.1,
+              },
+            ],
+          },
+        },
+      },
     },
   });
 
-  // Receta de la cookie
-  await prisma.recipe.createMany({
-    data: [
-      { cookieId: cookie.id, ingredientId: flour.id, quantity: 50 },
-      { cookieId: cookie.id, ingredientId: sugar.id, quantity: 20 },
-      { cookieId: cookie.id, ingredientId: nutella.id, quantity: 30 },
-    ],
+  console.log("Seed completed ✅", {
+    harina,
+    huevo,
+    mantequilla,
+    masaBase,
+    cookie,
   });
-
-  // Cliente
-  const customer = await prisma.customer.create({
-    data: {
-      name: "Juan",
-      lastName: "Pérez",
-      email: "juanperez@example.com",
-      phone: "1234567890",
-      address: "123 Main St, Princeton, TX",
-    },
-  });
-
-  // Venta
-  await prisma.sale.create({
-    data: {
-      cookieId: cookie.id,
-      customerId: customer.id,
-      quantity: 2,
-      total: 5.0,
-    },
-  });
-
-  // Gasto
-  await prisma.expense.create({
-    data: {
-      description: "Compra de empaques",
-      amount: 15.0,
-    },
-  });
-
-  console.log("✅ Seed finished!");
 }
 
 main()
+  .then(() => prisma.$disconnect())
   .catch((e) => {
     console.error(e);
+    prisma.$disconnect();
     process.exit(1);
-  })
-  .finally(async () => {
-    await prisma.$disconnect();
   });

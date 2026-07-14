@@ -4,6 +4,7 @@ import { CartProvider } from "@/context/CartContext";
 import { Great_Vibes } from "next/font/google";
 import { Inter } from "next/font/google";
 import LayoutWrapper from "@/components/LayoutWrapper";
+import Providers from "@/components/Providers";
 
 const greatVibes = Great_Vibes({
   subsets: ["latin"],
@@ -35,9 +36,11 @@ export default function RootLayout({ children }) {
         />
       </head>
       <body style={{ fontFamily: "'Happy Monkey', cursive" }}>
-        <CartProvider>
-          <LayoutWrapper>{children}</LayoutWrapper>
-        </CartProvider>
+        <Providers>
+          <CartProvider>
+            <LayoutWrapper>{children}</LayoutWrapper>
+          </CartProvider>
+        </Providers>
       </body>
     </html>
   );

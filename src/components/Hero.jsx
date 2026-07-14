@@ -102,7 +102,7 @@ export default function Hero() {
         </p>
       `,
         confirmButtonText: "Got it!",
-        width: 500,
+        width: 510,
         padding: "1.5rem",
         showCloseButton: true,
       });

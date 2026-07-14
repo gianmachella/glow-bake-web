@@ -3,29 +3,44 @@
 import { ChevronLeft, ChevronRight, TriangleAlert } from "lucide-react";
 import { useEffect, useState } from "react";
 
+import Image from "next/image";
 import Link from "next/link";
-import { cookies } from "@/utils/CookiesData";
 import { useCart } from "@/context/CartContext";
 
 export default function CookieDetailPage({ params }) {
-  const cookie = cookies.find((c) => c.id === params.id);
   const { addToCart } = useCart();
+  const [cookie, setCookie] = useState(null);
+  const [suggested, setSuggested] = useState([]);
   const [quantity, setQuantity] = useState(1);
   const [current, setCurrent] = useState(0);
-  const [suggested, setSuggested] = useState([]);
   const [showStore, setShowStore] = useState(false);
 
+  // Cargar cookie por ID y sugerencias
   useEffect(() => {
-    if (!cookie) return;
+    async function fetchData() {
+      try {
+        const res = await fetch("/api/cookies");
+        if (!res.ok) throw new Error("Error fetching cookies");
+        const data = await res.json();
 
-    const shuffled = cookies
-      .filter((c) => c.id !== cookie.id)
-      .sort(() => 0.5 - Math.random())
-      .slice(0, 4);
+        // Buscar cookie actual
+        const currentCookie = data.find((c) => c.id === params.id);
+        setCookie(currentCookie);
 
-    setSuggested(shuffled);
-  }, [cookie?.id]);
-  if (!cookie) return <p>Cookie not found</p>;
+        // Seleccionar sugerencias aleatorias
+        const shuffled = data
+          .filter((c) => c.id !== params.id)
+          .sort(() => 0.5 - Math.random())
+          .slice(0, 4);
+        setSuggested(shuffled);
+      } catch (err) {
+        console.error("❌ Error cargando cookie:", err);
+      }
+    }
+    fetchData();
+  }, [params.id]);
+
+  if (!cookie) return <p className="p-6 text-gray-500">Cookie not found 🍪</p>;
 
   const handleAdd = () => {
     addToCart({ ...cookie, quantity });
@@ -46,22 +61,28 @@ export default function CookieDetailPage({ params }) {
       <div className="w-full max-w-5xl mx-auto px-6 py-10 pt-30">
         {/* Carousel */}
         <div className="w-full mb-6 flex flex-col items-center">
-          <img
-            src={cookie.images[current]}
-            alt={cookie.name}
-            className="w-full max-w-md rounded-xl border shadow"
-          />
-          <div className="mt-3 flex items-center gap-4 text-gray-600 text-sm">
-            <button onClick={handlePrev} className="p-2 hover:text-pink-600">
-              <ChevronLeft className="w-5 h-5" />
-            </button>
-            <span>
-              {current + 1}/{cookie.images.length}
-            </span>
-            <button onClick={handleNext} className="p-2 hover:text-pink-600">
-              <ChevronRight className="w-5 h-5" />
-            </button>
+          <div className="relative w-full max-w-md aspect-square">
+            <Image
+              src={cookie.images?.[current] || cookie.image}
+              alt={cookie.name}
+              fill
+              sizes="(min-width: 768px) 28rem, 100vw"
+              className="rounded-xl border shadow object-contain"
+            />
           </div>
+          {cookie.images?.length > 1 && (
+            <div className="mt-3 flex items-center gap-4 text-gray-600 text-sm">
+              <button onClick={handlePrev} className="p-2 hover:text-pink-600">
+                <ChevronLeft className="w-5 h-5" />
+              </button>
+              <span>
+                {current + 1}/{cookie.images.length}
+              </span>
+              <button onClick={handleNext} className="p-2 hover:text-pink-600">
+                <ChevronRight className="w-5 h-5" />
+              </button>
+            </div>
+          )}
         </div>
 
         {/* Title */}
@@ -71,13 +92,14 @@ export default function CookieDetailPage({ params }) {
 
         {/* Description */}
         <p className="text-gray-600 italic mb-4">{cookie.description}</p>
+
         {/* Price & Cart */}
         <div className="flex flex-col md:flex-row md:items-center md:gap-6 mb-6 gap-4">
           <p className="text-2xl font-bold text-gray-900">
             (${cookie.price.toFixed(2)} USD)
           </p>
 
-          {/* contador bonito */}
+          {/* Contador */}
           <div className="flex items-center gap-3">
             <button
               onClick={() => setQuantity((q) => Math.max(1, q - 1))}
@@ -153,9 +175,11 @@ export default function CookieDetailPage({ params }) {
           {suggested.map((c) => (
             <Link key={c.id} href={`/cookies/${c.id}`}>
               <div className="bg-white shadow rounded-lg p-3 flex flex-col items-center hover:scale-105 transition">
-                <img
+                <Image
                   src={c.image}
                   alt={c.name}
+                  width={96}
+                  height={96}
                   className="w-24 h-24 object-cover rounded-full mb-2"
                 />
                 <p className="text-sm font-medium text-center text-gray-700">

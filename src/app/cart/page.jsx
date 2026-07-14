@@ -6,6 +6,7 @@ import Link from "next/link";
 import Swal from "sweetalert2";
 import { useCart } from "@/context/CartContext";
 import { useRouter } from "next/navigation";
+import { computeLineItems } from "@/lib/discounts";
 
 export default function CartPage() {
   const { cartItems, clearCart, increment, decrement, deleteFromCart } =
@@ -19,26 +20,92 @@ export default function CartPage() {
     notes: "",
     address: "",
     city: "",
-    deliveryMethod: "", // Delivery o Pickup
+    deliveryMethod: "",
     deliveryDay: "",
   });
 
   const [errors, setErrors] = useState({});
   const [loading, setLoading] = useState(false);
-  const [disabledDays, setDisabledDays] = useState({
-    Thursday: false,
-    Friday: false,
-  });
+  const [disabledDays, setDisabledDays] = useState({});
+
+  const [settings, setSettings] = useState(null);
+
   const [nextAvailableDate, setNextAvailableDate] = useState("");
 
-  const total = cartItems.reduce(
-    (sum, item) => sum + item.price * item.quantity,
-    0
+  const [activeDiscounts, setActiveDiscounts] = useState([]);
+
+  const [couponCode, setCouponCode] = useState("");
+  const [appliedCoupon, setAppliedCoupon] = useState(null);
+  const [couponError, setCouponError] = useState("");
+  const [couponLoading, setCouponLoading] = useState(false);
+
+  const discountsByCookieId = activeDiscounts.reduce((acc, d) => {
+    (acc[d.cookieId] ||= []).push(d);
+    return acc;
+  }, {});
+
+  const globalDiscounts = [];
+  if (appliedCoupon) {
+    const discountEntry = {
+      active: true,
+      discountType: appliedCoupon.discountType,
+      discountValue: appliedCoupon.discountValue,
+      minQuantity: appliedCoupon.minQuantity,
+    };
+    if (appliedCoupon.cookieId) {
+      (discountsByCookieId[appliedCoupon.cookieId] ||= []).push(discountEntry);
+    } else {
+      globalDiscounts.push(discountEntry); // no cookieId = applies to every cookie
+    }
+  }
+
+  const { items: lineItems, subtotal: total, savings } = computeLineItems(
+    cartItems,
+    discountsByCookieId,
+    globalDiscounts
   );
+
+  const handleApplyCoupon = async () => {
+    if (!couponCode.trim()) return;
+    setCouponLoading(true);
+    setCouponError("");
+    try {
+      const res = await fetch("/api/web-promotions/validate-code", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ code: couponCode.trim() }),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        setCouponError(data.error || "Invalid coupon code.");
+        return;
+      }
+      setAppliedCoupon(data);
+    } catch {
+      setCouponError("Could not validate coupon code. Please try again.");
+    } finally {
+      setCouponLoading(false);
+    }
+  };
+
+  const handleRemoveCoupon = () => {
+    setAppliedCoupon(null);
+    setCouponCode("");
+    setCouponError("");
+  };
+
+  const WEEKDAY_MAP = {
+    Sunday: 0,
+    Monday: 1,
+    Tuesday: 2,
+    Wednesday: 3,
+    Thursday: 4,
+    Friday: 5,
+    Saturday: 6,
+  };
 
   const router = useRouter();
 
-  // 📦 reglas de delivery por ciudad
   const getDeliveryMessage = () => {
     switch (form.city) {
       case "Princeton":
@@ -58,7 +125,6 @@ export default function CartPage() {
     }
   };
 
-  // 👉 próxima fecha
   const getNextDate = (targetDay) => {
     const today = new Date();
     const day = today.getDay();
@@ -76,69 +142,103 @@ export default function CartPage() {
     });
   };
 
-  // deshabilitar días
-  useEffect(() => {
-    const now = new Date();
-    const today = now.getDay();
-    const hours = now.getHours();
+  const getAvailableDays = () => {
+    if (!settings) return [];
 
-    let disableThursday = false,
-      disableFriday = false;
-    if (today === 4 && hours >= 9) disableThursday = true;
-    if (today === 5) disableThursday = true;
-    if (today === 5 && hours >= 9) disableFriday = true;
+    let days = ["Friday"];
 
-    if (today === 6 || today === 0) {
-      disableThursday = false;
-      disableFriday = false;
+    if (settings.enableSaturday) {
+      days.push("Saturday");
     }
 
-    setDisabledDays({ Thursday: disableThursday, Friday: disableFriday });
-  }, []);
+    settings.extraDays?.forEach((d) => {
+      if (d.active) days.push(d.day);
+    });
+
+    const specialDates = settings.specialDates
+      ?.filter((s) => cartItems.some((item) => item.id === s.productId))
+      .map((s) =>
+        new Date(s.date).toLocaleDateString("en-US", {
+          weekday: "long",
+          month: "long",
+          day: "numeric",
+          year: "numeric",
+        })
+      );
+
+    if (specialDates?.length > 0) {
+      return specialDates;
+    }
+
+    return [...days, "Other"];
+  };
+
+  useEffect(() => {
+    if (!settings) return;
+
+    const available = getAvailableDays();
+
+    if (form.deliveryDay && !available.includes(form.deliveryDay)) {
+      setForm((prev) => ({
+        ...prev,
+        deliveryDay: "",
+      }));
+    }
+  }, [settings]);
 
   const handleChange = (e) => {
     const { name, value } = e.target;
 
-    if (
-      name === "deliveryDay" &&
-      value === "Other" &&
-      form.deliveryMethod === "Pickup"
-    ) {
-      Swal.fire({
-        icon: "info",
-        title: "Special Catering Orders (Pickup)",
-        html: "The 'Other' option is only for catering or special orders.<br/><strong>The minimum purchase is 10 cookies for this service.</strong><br/>Please contact us directly.",
-        confirmButtonColor: "#ec4899",
-      });
-      setNextAvailableDate(`Contact us to schedule Only text: (945) 400 5808`);
+    if (name === "deliveryDay") {
+      if (!WEEKDAY_MAP[value]) {
+        setNextAvailableDate(value);
+        setForm({ ...form, deliveryDay: value });
+        return;
+      }
+
+      const weekdayNum = WEEKDAY_MAP[value];
+      const nextDate = getNextDate(weekdayNum);
+
+      setNextAvailableDate(nextDate);
     }
 
-    if (
-      name === "deliveryDay" &&
-      value === "Other" &&
-      form.deliveryMethod === "Delivery"
-    ) {
+    if (name === "deliveryDay" && value === "Other") {
       Swal.fire({
         icon: "info",
-        title: "Special Catering Orders (Delivery)",
-        html: "The 'Other' option is only for catering or special orders.<br/>Please contact us directly for details.",
+        title: "Special catering order",
+        html: `
+      'Other' is only for catering orders.<br/>
+      <b>Minimum 10 cookies.</b><br/>
+      Contact us at: <br/>
+      <b>(945) 400 5808 (text only)</b>
+    `,
         confirmButtonColor: "#ec4899",
       });
-      setNextAvailableDate(
-        `Contact us to schedule <br/> Only text: (945) 400 5808`
-      );
+
+      setNextAvailableDate("Contact us directly");
     }
 
     if (name === "deliveryDay" && value === "Thursday")
       setNextAvailableDate(getNextDate(4));
     if (name === "deliveryDay" && value === "Friday")
       setNextAvailableDate(getNextDate(5));
+    if (name === "deliveryDay" && value === "Saturday")
+      setNextAvailableDate(getNextDate(6));
 
+    if (name === "deliveryMethod") {
+      setForm((prev) => ({
+        ...prev,
+        deliveryDay: "",
+      }));
+
+      setNextAvailableDate("");
+    }
     setForm({ ...form, [name]: value });
   };
 
   const validate = () => {
     const newErrors = {};
+
     if (!form.name) newErrors.name = "First name is required.";
     if (!form.lastName) newErrors.lastName = "Last name is required.";
     if (!form.email.includes("@")) newErrors.email = "Valid email required.";
@@ -146,13 +246,24 @@ export default function CartPage() {
     if (!form.deliveryMethod)
       newErrors.deliveryMethod = "Select delivery or pickup.";
 
+    const availableDays = getAvailableDays();
+
     if (form.deliveryMethod === "Delivery") {
       if (!form.address) newErrors.address = "Address required.";
       if (!form.city) newErrors.city = "Select a city.";
       if (!form.deliveryDay) newErrors.deliveryDay = "Select a delivery day.";
+
+      if (form.deliveryDay && !availableDays.includes(form.deliveryDay)) {
+        newErrors.deliveryDay = "This day is not available.";
+      }
     }
+
     if (form.deliveryMethod === "Pickup") {
       if (!form.deliveryDay) newErrors.deliveryDay = "Select a pickup day.";
+
+      if (form.deliveryDay && !availableDays.includes(form.deliveryDay)) {
+        newErrors.deliveryDay = "This day is not available.";
+      }
     }
 
     setErrors(newErrors);
@@ -173,9 +284,10 @@ export default function CartPage() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           ...form,
-          total, // 👈 subtotal sin delivery
-          deliveryFee: deliveryCost, // 👈 fee separado
-          items: cartItems, // 👈 solo cookies
+          total,
+          deliveryFee: deliveryCost,
+          items: cartItems,
+          couponCode: appliedCoupon?.code || undefined,
         }),
       });
 
@@ -186,9 +298,11 @@ export default function CartPage() {
           "success"
         );
         clearCart();
+        handleRemoveCoupon();
         router.push("/#menu");
       } else {
-        Swal.fire("Oops", "Something went wrong. Try again.", "error");
+        const data = await res.json().catch(() => ({}));
+        Swal.fire("Oops", data.error || "Something went wrong. Try again.", "error");
       }
     } catch (err) {
       Swal.fire("Error", "Could not send order.", "error");
@@ -201,6 +315,34 @@ export default function CartPage() {
   useEffect(() => {
     window.scrollTo({ top: 0, behavior: "smooth" });
   }, [cartItems]);
+
+  useEffect(() => {
+    const fetchSettings = async () => {
+      try {
+        const res = await fetch("/api/settings/delivery");
+        const data = await res.json();
+        setSettings(data);
+      } catch (err) {
+        console.error("Error loading settings:", err);
+      }
+    };
+
+    fetchSettings();
+  }, []);
+
+  useEffect(() => {
+    const fetchActiveDiscounts = async () => {
+      try {
+        const res = await fetch("/api/auto-discounts/active");
+        const data = await res.json();
+        setActiveDiscounts(data);
+      } catch (err) {
+        console.error("Error loading automatic discounts:", err);
+      }
+    };
+
+    fetchActiveDiscounts();
+  }, []);
 
   return (
     <section className="w-full min-h-screen bg-pink-50 px-6 py-12 pt-24">
@@ -218,7 +360,7 @@ export default function CartPage() {
           <div className="grid grid-cols-1 md:grid-cols-3 gap-10">
             {/* Items */}
             <div className="md:col-span-2 space-y-6">
-              {cartItems.map((item, idx) => (
+              {lineItems.map((item, idx) => (
                 <div
                   key={idx}
                   className="flex flex-col md:flex-row md:items-center gap-4 border-b border-gray-300 pb-4"
@@ -241,7 +383,19 @@ export default function CartPage() {
                         </h3>
                       </Link>
                       <p className="text-sm text-gray-800">
-                        {item.quantity} × ${item.price.toFixed(2)}
+                        {item.quantity} ×{" "}
+                        {item.unitOff > 0 ? (
+                          <>
+                            <span className="line-through text-gray-400 mr-1">
+                              ${item.price.toFixed(2)}
+                            </span>
+                            <span className="text-pink-600 font-semibold">
+                              ${item.unitPrice.toFixed(2)}
+                            </span>
+                          </>
+                        ) : (
+                          `$${item.price.toFixed(2)}`
+                        )}
                       </p>
                     </div>
                   </div>
@@ -265,7 +419,7 @@ export default function CartPage() {
                       </button>
                     </div>
                     <div className="text-center md:text-right font-bold text-pink-600 w-full md:w-20">
-                      ${(item.price * item.quantity).toFixed(2)}
+                      ${item.lineTotal.toFixed(2)}
                     </div>
                     <button
                       onClick={() => deleteFromCart(item.id)}
@@ -287,12 +441,59 @@ export default function CartPage() {
                 <span>Subtotal</span>
                 <span className="font-semibold">${total.toFixed(2)}</span>
               </div>
+              {savings > 0 && (
+                <div className="flex justify-between mb-2 text-green-600">
+                  <span>You saved</span>
+                  <span className="font-semibold">-${savings.toFixed(2)}</span>
+                </div>
+              )}
               <div className="border-t my-2"></div>
               <div className="flex justify-between mb-4">
                 <span className="text-gray-900 font-bold">Total</span>
                 <span className="text-xl font-bold text-pink-700">
                   ${total.toFixed(2)}
                 </span>
+              </div>
+
+              <div className="mb-4">
+                <label className="text-sm font-medium text-gray-900 block mb-1">
+                  Coupon code
+                </label>
+                {appliedCoupon ? (
+                  <div className="flex items-center justify-between bg-green-50 border border-green-200 rounded px-3 py-2">
+                    <span className="text-sm text-green-700 font-semibold">
+                      {appliedCoupon.code} applied — {appliedCoupon.promotionName}
+                    </span>
+                    <button
+                      type="button"
+                      onClick={handleRemoveCoupon}
+                      className="text-xs text-red-600 hover:underline"
+                    >
+                      Remove
+                    </button>
+                  </div>
+                ) : (
+                  <div className="flex gap-2">
+                    <input
+                      type="text"
+                      value={couponCode}
+                      onChange={(e) => setCouponCode(e.target.value)}
+                      placeholder="Enter code"
+                      className="flex-1 border border-gray-300 rounded px-3 py-2 text-sm text-gray-900"
+                    />
+                    <button
+                      type="button"
+                      onClick={handleApplyCoupon}
+                      disabled={couponLoading || !couponCode.trim()}
+                      className="px-4 py-2 bg-gray-800 hover:bg-gray-900 text-white text-sm font-semibold rounded disabled:opacity-50"
+                    >
+                      {couponLoading ? "..." : "Apply"}
+                    </button>
+                  </div>
+                )}
+                {couponError && (
+                  <p className="text-xs text-red-600 mt-1">{couponError}</p>
+                )}
               </div>
 
               <h3 className="font-semibold text-gray-900 mb-2">
@@ -375,7 +576,7 @@ export default function CartPage() {
                         Pickup day:
                       </label>
                       <div className="flex gap-4 mt-2">
-                        {["Thursday", "Friday", "Other"].map((day) => (
+                        {getAvailableDays().map((day) => (
                           <label
                             key={day}
                             className={`text-sm flex items-center gap-1 ${
@@ -392,15 +593,24 @@ export default function CartPage() {
                               onChange={handleChange}
                               disabled={disabledDays[day]}
                             />
+                            {settings?.specialDates?.some((s) =>
+                              cartItems.some((i) => i.id === s.productId)
+                            ) && (
+                              <p className="text-xs text-yellow-700 bg-yellow-100 p-2 rounded mt-2">
+                                ⚠️ This item has a fixed delivery/pickup date.
+                              </p>
+                            )}
+
                             {day}
                           </label>
                         ))}
                       </div>
                       {nextAvailableDate && (
-                        <p className="text-xs text-gray-700 mt-1 italic">
-                          {nextAvailableDate}
+                        <p className="text-xs text-gray-600 mt-1 italic">
+                          Next available date: {nextAvailableDate}
                         </p>
                       )}
+
                       <p className="text-xs text-red-600 mt-1 h-4">
                         {errors.deliveryDay || ""}
                       </p>
@@ -476,7 +686,7 @@ export default function CartPage() {
                         Delivery day:
                       </label>
                       <div className="flex gap-4 mt-2">
-                        {["Thursday", "Friday", "Other"].map((day) => (
+                        {getAvailableDays().map((day) => (
                           <label
                             key={day}
                             className={`text-sm flex items-center gap-1 ${
@@ -493,6 +703,14 @@ export default function CartPage() {
                               onChange={handleChange}
                               disabled={disabledDays[day]}
                             />
+                            {settings?.specialDates?.some((s) =>
+                              cartItems.some((i) => i.id === s.productId)
+                            ) && (
+                              <p className="text-xs text-yellow-700 bg-yellow-100 p-2 rounded mt-2">
+                                ⚠️ This item has a fixed delivery/pickup date.
+                              </p>
+                            )}
+
                             {day}
                           </label>
                         ))}

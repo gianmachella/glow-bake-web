@@ -2,6 +2,7 @@
 
 import { Menu, X } from "lucide-react";
 
+import Image from "next/image";
 import Link from "next/link";
 import { useCart } from "@/context/CartContext";
 import { useState } from "react";
@@ -19,14 +20,18 @@ export default function Navbar() {
       <div className="max-w-6xl mx-auto px-4 py-4 flex items-center justify-between">
         {/* Logo */}
         <Link href="/" className="flex items-center gap-2 relative">
-          <img
+          <Image
             src="/images/logo-gb.png"
             alt="Glow Bake Logo"
+            width={100}
+            height={100}
             className="h-8 w-auto hover:scale-110 transition-transform duration-200"
           />
-          <img
+          <Image
             src="/images/banners/Glow Bake.png"
             alt="Glow Bake Text"
+            width={178}
+            height={100}
             className="h-8 w-auto"
           />
         </Link>
@@ -48,6 +53,12 @@ export default function Navbar() {
               Menu
             </Link>
             <Link
+              href="/#promotions"
+              className="text-sm text-gray-700 hover:text-pink-600"
+            >
+              Promotions
+            </Link>
+            <Link
               href="/#testimonials"
               className="text-sm text-gray-700 hover:text-pink-600"
             >
@@ -63,13 +74,15 @@ export default function Navbar() {
 
           {/* Cart */}
           <Link href="/cart" className="relative">
-            <img
+            <Image
               src={
                 cartItems.length > 0
                   ? "/images/basket-full.png"
                   : "/images/basket-empty.png"
               }
               alt="Cart"
+              width={100}
+              height={100}
               className="h-8 w-auto transition-transform duration-200 hover:scale-105"
             />
             {cartItems.length > 0 && (

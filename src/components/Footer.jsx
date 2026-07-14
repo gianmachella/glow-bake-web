@@ -1,21 +1,27 @@
+import Image from "next/image";
+
 export default function Footer() {
   return (
     <footer className="relative bg-pink-100 text-gray-800 py-10 px-6 overflow-hidden">
       {/* Imagen con transparencia encima del fondo */}
       <div className="absolute inset-0">
-        <img
+        <Image
           src="/images/footer-bg.png"
           alt="Decorative Overlay"
-          className="w-full h-full object-cover opacity-7"
+          fill
+          sizes="100vw"
+          className="object-cover opacity-7"
         />
       </div>
 
       {/* Contenido */}
       <div className="relative z-10 max-w-6xl mx-auto grid grid-cols-1 md:grid-cols-4 gap-10 text-center md:text-left">
         <div>
-          <img
+          <Image
             src="/images/logo-gb.png"
             alt="Glow Bake Logo"
+            width={160}
+            height={160}
             className="h-40 mx-auto md:mx-0 mb-4 hover:scale-145 transition-transform duration-200"
           />
           <p className="text-sm italic">So Sweet. So Handmade. So Glow Bake.</p>
@@ -53,7 +59,7 @@ export default function Footer() {
           <h3 className="font-semibold mb-3 text-pink-700">Contact Us</h3>
           <p className="text-sm mb-1">📍 Princeton, TX</p>
           <p className="text-sm mb-1 flex items-center gap-2">
-            <img src="/images/gmail.png" alt="gmail" className="h-6" />
+            <Image src="/images/gmail.png" alt="gmail" width={24} height={24} className="h-6" />
             glow.bake.tx@gmail.com
           </p>
           <p className="text-sm mb-3">📱 (945) 400-5808</p>
@@ -63,9 +69,11 @@ export default function Footer() {
               className="hover:text-pink-600 hover:scale-205 transition-transform duration-200"
               target="_blank"
             >
-              <img
+              <Image
                 src="/images/instagram.png"
                 alt="Instagram"
+                width={24}
+                height={24}
                 className="h-6"
               />
             </a>
@@ -74,7 +82,7 @@ export default function Footer() {
               className="hover:text-pink-600 hover:scale-205 transition-transform duration-200"
               target="_blank"
             >
-              <img src="/images/facebook.png" alt="Facebook" className="h-6" />
+              <Image src="/images/facebook.png" alt="Facebook" width={24} height={24} className="h-6" />
             </a>
           </div>
         </div>

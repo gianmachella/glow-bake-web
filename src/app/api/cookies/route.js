@@ -1,53 +1,85 @@
-// src/app/api/cookies/route.js
-import { Buffer } from "buffer";
-import prisma from "@/lib/prisma"; // ✅ solo este, sin duplicar
+import prisma from "@/lib/prisma";
 import { supabase } from "@/lib/supabase";
+import { requireAdmin } from "@/lib/apiAuth";
 
-// 📍 GET → lista todas las cookies
+async function uploadToSupabase(file) {
+  const filename = `${Date.now()}-${file.name}`;
+
+  const { error } = await supabase.storage
+    .from("cookies")
+    .upload(filename, file, {
+      contentType: file.type,
+      upsert: true,
+    });
+
+  if (error) {
+    console.error("Supabase upload error:", error);
+    throw error;
+  }
+
+  const { data } = supabase.storage.from("cookies").getPublicUrl(filename);
+  return data.publicUrl;
+}
+
+async function recalcCookieCost(cookieId) {
+  const recipes = await prisma.recipe.findMany({
+    where: { cookieId },
+    include: { baseDough: true, ingredients: true },
+  });
+
+  if (!recipes.length) return 0;
+  return recipes.reduce((acc, r) => acc + r.totalCost, 0);
+}
+
+// 📍 GET
 export async function GET() {
   try {
-    const cookies = await prisma.cookie.findMany();
-    return Response.json(cookies);
+    const cookies = await prisma.cookie.findMany({
+      include: {
+        recipes: { include: { baseDough: true, ingredients: true } },
+        doughInventories: true,
+      },
+      orderBy: { createdAt: "desc" },
+    });
+
+    const withStock = cookies.map((c) => ({
+      ...c,
+      frozenStock: c.doughInventories.reduce((acc, d) => acc + d.quantity, 0),
+    }));
+
+    return new Response(JSON.stringify(withStock), {
+      status: 200,
+      headers: { "Content-Type": "application/json" },
+    });
   } catch (err) {
     console.error("❌ Error fetching cookies:", err);
-    return Response.json([], { status: 200 }); // devolvemos [] para no romper el FE
+    return new Response(JSON.stringify({ error: err.message }), {
+      status: 500,
+    });
   }
 }
 
-// 📍 POST → crea cookie con imágenes
+// 📍 POST
 export async function POST(req) {
+  const { unauthorized } = await requireAdmin();
+  if (unauthorized) return unauthorized;
+
   try {
     const formData = await req.formData();
-
     const name = formData.get("name");
     const price = parseFloat(formData.get("price"));
     const shortDescription = formData.get("shortDescription");
     const description = formData.get("description");
     const ingredients = formData.get("ingredients");
+    const visible = formData.get("visible") === "true";
+    const isNew = formData.get("isNew") === "true";
 
-    const files = formData.getAll("images");
+    const files = formData.getAll("images").slice(0, 2);
     const uploads = [];
-
     for (const file of files) {
       if (file && typeof file === "object") {
-        const arrayBuffer = await file.arrayBuffer();
-        const buffer = Buffer.from(arrayBuffer);
-
-        const filename = `${Date.now()}-${file.name}`;
-        const { error } = await supabase.storage
-          .from("cookies")
-          .upload(filename, buffer, {
-            contentType: file.type,
-            upsert: true,
-          });
-
-        if (error) throw error;
-
-        const { data: urlData } = supabase.storage
-          .from("cookies")
-          .getPublicUrl(filename);
-
-        uploads.push(urlData.publicUrl);
+        const url = await uploadToSupabase(file);
+        uploads.push(url);
       }
     }
 
@@ -58,62 +90,134 @@ export async function POST(req) {
         shortDescription,
         description,
         ingredients,
+        visible,
+        isNew,
         image: uploads[0] || null,
-        images: uploads, // ✅ en tu schema ya debe ser Json o String[]
+        images: uploads,
       },
     });
 
-    return new Response(JSON.stringify(cookie), { status: 201 });
-  } catch (err) {
-    console.error("❌ Error creando cookie:", err);
-    return new Response(
-      JSON.stringify({ error: "Error creando cookie", details: err.message }),
-      { status: 500 }
-    );
-  }
-}
-
-// 📍 PUT → editar cookie existente
-export async function PUT(req) {
-  try {
-    const body = await req.json();
-    const { id, ...updates } = body;
-
-    const cookie = await prisma.cookie.update({
-      where: { id },
-      data: updates,
+    const cost = await recalcCookieCost(cookie.id);
+    const updated = await prisma.cookie.update({
+      where: { id: cookie.id },
+      data: { cost },
     });
 
-    return new Response(JSON.stringify(cookie), { status: 200 });
+    return new Response(JSON.stringify(updated), {
+      status: 201,
+      headers: { "Content-Type": "application/json" },
+    });
   } catch (err) {
-    console.error("❌ Error actualizando cookie:", err);
-    return new Response(
-      JSON.stringify({
-        error: "Error actualizando cookie",
-        details: err.message,
-      }),
-      { status: 500 }
-    );
+    console.error("❌ Error creando cookie:", err);
+    return new Response(JSON.stringify({ error: err.message }), {
+      status: 500,
+    });
   }
 }
 
-// 📍 DELETE → eliminar cookie
-export async function DELETE(req) {
+// 📍 PUT
+export async function PUT(req) {
+  const { unauthorized } = await requireAdmin();
+  if (unauthorized) return unauthorized;
+
   try {
+    const contentType = req.headers.get("content-type") || "";
+
+    // 🔄 Caso multipart (con imágenes nuevas)
+    if (contentType.includes("multipart/form-data")) {
+      const formData = await req.formData();
+      const id = formData.get("id");
+
+      const updates = {
+        name: formData.get("name"),
+        price: parseFloat(formData.get("price")),
+        shortDescription: formData.get("shortDescription"),
+        description: formData.get("description"),
+        ingredients: formData.get("ingredients"),
+        visible: formData.get("visible") === "true",
+        isNew: formData.get("isNew") === "true",
+      };
+
+      const files = formData.getAll("images").slice(0, 2);
+      const uploads = [];
+      for (const file of files) {
+        if (file && typeof file === "object") {
+          const url = await uploadToSupabase(file);
+          uploads.push(url);
+        }
+      }
+
+      if (uploads.length) {
+        updates.image = uploads[0];
+        updates.images = uploads;
+      }
+
+      const cookie = await prisma.cookie.update({
+        where: { id },
+        data: updates,
+      });
+      const cost = await recalcCookieCost(cookie.id);
+      const updated = await prisma.cookie.update({
+        where: { id: cookie.id },
+        data: { cost },
+      });
+
+      return new Response(JSON.stringify(updated), {
+        status: 200,
+        headers: { "Content-Type": "application/json" },
+      });
+    }
+
+    // 🔄 Caso JSON (solo toggle visible, isNew, etc.)
     const body = await req.json();
-    const { id } = body;
+    const { id, ...rest } = body;
+    const cookie = await prisma.cookie.update({ where: { id }, data: rest });
 
-    await prisma.cookie.delete({ where: { id } });
+    const cost = await recalcCookieCost(cookie.id);
+    const updated = await prisma.cookie.update({
+      where: { id: cookie.id },
+      data: { cost },
+    });
 
-    return new Response(JSON.stringify({ success: true }), { status: 200 });
+    return new Response(JSON.stringify(updated), {
+      status: 200,
+      headers: { "Content-Type": "application/json" },
+    });
+  } catch (err) {
+    console.error("❌ Error actualizando cookie:", err);
+    return new Response(JSON.stringify({ error: err.message }), {
+      status: 500,
+    });
+  }
+}
+
+// 📍 DELETE (soft/hard)
+export async function DELETE(req) {
+  const { unauthorized } = await requireAdmin();
+  if (unauthorized) return unauthorized;
+
+  try {
+    const { id, soft } = await req.json();
+    if (!id) {
+      return new Response(JSON.stringify({ error: "Missing id" }), {
+        status: 400,
+      });
+    }
+
+    if (soft) {
+      const updated = await prisma.cookie.update({
+        where: { id },
+        data: { visible: false },
+      });
+      return new Response(JSON.stringify(updated), { status: 200 });
+    } else {
+      await prisma.cookie.delete({ where: { id } });
+      return new Response(JSON.stringify({ success: true }), { status: 200 });
+    }
   } catch (err) {
     console.error("❌ Error eliminando cookie:", err);
-    return new Response(
-      JSON.stringify({
-        error: "Error eliminando cookie",
-        details: err.message,
-      }),
-      { status: 500 }
-    );
+    return new Response(JSON.stringify({ error: err.message }), {
+      status: 500,
+    });
   }
 }

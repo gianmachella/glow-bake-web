@@ -1,0 +1,13 @@
+-- CreateTable
+CREATE TABLE `DoughInventory` (
+    `id` VARCHAR(191) NOT NULL,
+    `cookieId` VARCHAR(191) NOT NULL,
+    `quantity` INTEGER NOT NULL,
+    `createdAt` DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
+    `updatedAt` DATETIME(3) NOT NULL,
+
+    PRIMARY KEY (`id`)
+) DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+
+-- AddForeignKey
+ALTER TABLE `DoughInventory` ADD CONSTRAINT `DoughInventory_cookieId_fkey` FOREIGN KEY (`cookieId`) REFERENCES `Cookie`(`id`) ON DELETE RESTRICT ON UPDATE CASCADE;
