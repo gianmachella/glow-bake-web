@@ -17,6 +17,7 @@ export async function GET() {
       discountType: true,
       discountValue: true,
       minQuantity: true,
+      active: true,
     },
   });
   return Response.json(discounts);

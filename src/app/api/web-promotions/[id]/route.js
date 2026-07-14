@@ -16,7 +16,6 @@ async function uploadImage(file) {
 function parseAndValidate(formData) {
   const name = formData.get("name");
   const description = formData.get("description") || null;
-  const customInstructions = formData.get("customInstructions") || null;
   const cookieId = formData.get("cookieId") || null; // empty/absent = applies to all cookies
   const type = formData.get("type");
   const discountValue = parseFloat(formData.get("discountValue"));
@@ -46,7 +45,6 @@ function parseAndValidate(formData) {
     data: {
       name,
       description,
-      customInstructions,
       cookieId,
       type,
       discountType,
@@ -87,7 +85,7 @@ export async function PUT(req, { params }) {
   return NextResponse.json(updated);
 }
 
-// DELETE — admin: remove web promotion (and its claims, via cascade)
+// DELETE — admin: remove web promotion
 export async function DELETE(req, { params }) {
   const { unauthorized } = await requireAdmin();
   if (unauthorized) return unauthorized;

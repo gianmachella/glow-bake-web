@@ -16,7 +16,6 @@ async function uploadImage(file) {
 function parseAndValidate(formData) {
   const name = formData.get("name");
   const description = formData.get("description") || null;
-  const customInstructions = formData.get("customInstructions") || null;
   const cookieId = formData.get("cookieId") || null; // empty/absent = applies to all cookies
   const type = formData.get("type"); // FIXED | VOLUME
   const discountValue = parseFloat(formData.get("discountValue"));
@@ -46,7 +45,6 @@ function parseAndValidate(formData) {
     data: {
       name,
       description,
-      customInstructions,
       cookieId,
       type,
       discountType,
@@ -59,7 +57,7 @@ function parseAndValidate(formData) {
   };
 }
 
-// GET — admin: all web promotions with cookie name + claim stats
+// GET — admin: all web promotions with cookie name
 export async function GET() {
   const { unauthorized } = await requireAdmin();
   if (unauthorized) return unauthorized;
@@ -67,7 +65,6 @@ export async function GET() {
   const promotions = await prisma.webPromotion.findMany({
     include: {
       cookie: { select: { name: true } },
-      claims: { select: { id: true, used: true } },
     },
     orderBy: { createdAt: "desc" },
   });

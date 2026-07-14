@@ -5,7 +5,7 @@ import prisma from "@/lib/prisma";
 import { parseJsonBody } from "@/lib/validate";
 import { apiError } from "@/lib/apiResponse";
 import { computeLineItems } from "@/lib/discounts";
-import { isWithinDateWindow, startOfDay } from "@/lib/dateWindow";
+import { startOfDay } from "@/lib/dateWindow";
 
 const orderItemSchema = z.object({
   id: z.string().min(1),
@@ -27,7 +27,6 @@ const orderSchema = z.object({
   total: z.number().nonnegative(),
   deliveryFee: z.number().nonnegative().optional().default(0),
   items: z.array(orderItemSchema).min(1),
-  couponCode: z.string().trim().min(1).optional(),
 });
 
 export async function POST(req) {
@@ -45,7 +44,6 @@ export async function POST(req) {
       notes,
       items,
       deliveryFee,
-      couponCode,
     } = data;
 
     // 🔒 Recompute prices/total from the database — never trust client-submitted
@@ -75,32 +73,25 @@ export async function POST(req) {
       return acc;
     }, {});
 
-    // 🎟️ Validate a claimed web-promotion coupon code, if one was submitted —
-    // never trust the discount the client thinks applies, re-check it here.
-    let claim = null;
-    const globalDiscounts = [];
-    if (couponCode) {
-      claim = await prisma.webPromotionClaim.findUnique({
-        where: { code: couponCode.trim().toUpperCase() },
-        include: { webPromotion: true },
-      });
-      if (!claim) return apiError("Invalid coupon code", 400);
-      if (claim.used) return apiError("This coupon code has already been used", 400);
-
-      const wp = claim.webPromotion;
-      const promotionValid = wp.active && isWithinDateWindow(wp.startDate, wp.endDate, now);
-      if (!promotionValid) return apiError("This promotion is no longer active", 400);
-
-      const discountEntry = {
+    // 🎁 Automatically apply active web promotions (fixed or volume/bulk) —
+    // recomputed server-side from the DB, same as auto-discounts, so nothing
+    // client-submitted is trusted.
+    const activeWebPromotions = await prisma.webPromotion.findMany({
+      where: {
         active: true,
-        discountType: wp.discountType,
-        discountValue: wp.discountValue,
-        minQuantity: wp.minQuantity,
-      };
+        OR: [{ cookieId: null }, { cookieId: { in: cookieIds } }],
+        AND: [
+          { OR: [{ startDate: null }, { startDate: { lte: now } }] },
+          { OR: [{ endDate: null }, { endDate: { gte: startOfDay(now) } }] },
+        ],
+      },
+    });
+    const globalDiscounts = [];
+    for (const wp of activeWebPromotions) {
       if (wp.cookieId) {
-        (discountsByCookieId[wp.cookieId] ||= []).push(discountEntry);
+        (discountsByCookieId[wp.cookieId] ||= []).push(wp);
       } else {
-        globalDiscounts.push(discountEntry); // no cookieId = applies to every cookie
+        globalDiscounts.push(wp); // no cookieId = applies to every cookie
       }
     }
 
@@ -113,9 +104,7 @@ export async function POST(req) {
 
     const total = subtotal;
 
-    // 1️⃣ Crear o conectar cliente, crear venta con items, y marcar el cupón como
-    // usado — todo en una sola transacción para que un cupón no pueda reutilizarse
-    // en una condición de carrera.
+    // 1️⃣ Crear o conectar cliente, crear venta con items.
     const sale = await prisma.$transaction(async (tx) => {
       const customer = await tx.customer.upsert({
         where: { email },
@@ -143,16 +132,6 @@ export async function POST(req) {
           },
         },
       });
-
-      if (claim) {
-        const redeemed = await tx.webPromotionClaim.updateMany({
-          where: { id: claim.id, used: false },
-          data: { used: true, usedAt: new Date() },
-        });
-        if (redeemed.count === 0) {
-          throw new Error("COUPON_ALREADY_USED");
-        }
-      }
 
       return newSale;
     });
@@ -289,9 +268,6 @@ Total: $${grandTotal.toFixed(2)}
 
     return new Response(JSON.stringify(sale), { status: 200 });
   } catch (err) {
-    if (err.message === "COUPON_ALREADY_USED") {
-      return apiError("This coupon code has already been used", 400);
-    }
     console.error("❌ Error processing order:", err);
     return new Response("Error processing order", { status: 500 });
   }

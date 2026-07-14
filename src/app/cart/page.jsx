@@ -33,29 +33,15 @@ export default function CartPage() {
   const [nextAvailableDate, setNextAvailableDate] = useState("");
 
   const [activeDiscounts, setActiveDiscounts] = useState([]);
+  const [activeWebPromotions, setActiveWebPromotions] = useState([]);
 
-  const [couponCode, setCouponCode] = useState("");
-  const [appliedCoupon, setAppliedCoupon] = useState(null);
-  const [couponError, setCouponError] = useState("");
-  const [couponLoading, setCouponLoading] = useState(false);
-
-  const discountsByCookieId = activeDiscounts.reduce((acc, d) => {
-    (acc[d.cookieId] ||= []).push(d);
-    return acc;
-  }, {});
-
+  const discountsByCookieId = {};
   const globalDiscounts = [];
-  if (appliedCoupon) {
-    const discountEntry = {
-      active: true,
-      discountType: appliedCoupon.discountType,
-      discountValue: appliedCoupon.discountValue,
-      minQuantity: appliedCoupon.minQuantity,
-    };
-    if (appliedCoupon.cookieId) {
-      (discountsByCookieId[appliedCoupon.cookieId] ||= []).push(discountEntry);
+  for (const d of [...activeDiscounts, ...activeWebPromotions]) {
+    if (d.cookieId) {
+      (discountsByCookieId[d.cookieId] ||= []).push(d);
     } else {
-      globalDiscounts.push(discountEntry); // no cookieId = applies to every cookie
+      globalDiscounts.push(d); // no cookieId = applies to every cookie
     }
   }
 
@@ -64,35 +50,6 @@ export default function CartPage() {
     discountsByCookieId,
     globalDiscounts
   );
-
-  const handleApplyCoupon = async () => {
-    if (!couponCode.trim()) return;
-    setCouponLoading(true);
-    setCouponError("");
-    try {
-      const res = await fetch("/api/web-promotions/validate-code", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ code: couponCode.trim() }),
-      });
-      const data = await res.json();
-      if (!res.ok) {
-        setCouponError(data.error || "Invalid coupon code.");
-        return;
-      }
-      setAppliedCoupon(data);
-    } catch {
-      setCouponError("Could not validate coupon code. Please try again.");
-    } finally {
-      setCouponLoading(false);
-    }
-  };
-
-  const handleRemoveCoupon = () => {
-    setAppliedCoupon(null);
-    setCouponCode("");
-    setCouponError("");
-  };
 
   const WEEKDAY_MAP = {
     Sunday: 0,
@@ -287,7 +244,6 @@ export default function CartPage() {
           total,
           deliveryFee: deliveryCost,
           items: cartItems,
-          couponCode: appliedCoupon?.code || undefined,
         }),
       });
 
@@ -298,7 +254,6 @@ export default function CartPage() {
           "success"
         );
         clearCart();
-        handleRemoveCoupon();
         router.push("/#menu");
       } else {
         const data = await res.json().catch(() => ({}));
@@ -333,9 +288,12 @@ export default function CartPage() {
   useEffect(() => {
     const fetchActiveDiscounts = async () => {
       try {
-        const res = await fetch("/api/auto-discounts/active");
-        const data = await res.json();
-        setActiveDiscounts(data);
+        const [autoRes, webPromoRes] = await Promise.all([
+          fetch("/api/auto-discounts/active"),
+          fetch("/api/web-promotions/active"),
+        ]);
+        setActiveDiscounts(await autoRes.json());
+        setActiveWebPromotions(await webPromoRes.json());
       } catch (err) {
         console.error("Error loading automatic discounts:", err);
       }
@@ -453,47 +411,6 @@ export default function CartPage() {
                 <span className="text-xl font-bold text-pink-700">
                   ${total.toFixed(2)}
                 </span>
-              </div>
-
-              <div className="mb-4">
-                <label className="text-sm font-medium text-gray-900 block mb-1">
-                  Coupon code
-                </label>
-                {appliedCoupon ? (
-                  <div className="flex items-center justify-between bg-green-50 border border-green-200 rounded px-3 py-2">
-                    <span className="text-sm text-green-700 font-semibold">
-                      {appliedCoupon.code} applied — {appliedCoupon.promotionName}
-                    </span>
-                    <button
-                      type="button"
-                      onClick={handleRemoveCoupon}
-                      className="text-xs text-red-600 hover:underline"
-                    >
-                      Remove
-                    </button>
-                  </div>
-                ) : (
-                  <div className="flex gap-2">
-                    <input
-                      type="text"
-                      value={couponCode}
-                      onChange={(e) => setCouponCode(e.target.value)}
-                      placeholder="Enter code"
-                      className="flex-1 border border-gray-300 rounded px-3 py-2 text-sm text-gray-900"
-                    />
-                    <button
-                      type="button"
-                      onClick={handleApplyCoupon}
-                      disabled={couponLoading || !couponCode.trim()}
-                      className="px-4 py-2 bg-gray-800 hover:bg-gray-900 text-white text-sm font-semibold rounded disabled:opacity-50"
-                    >
-                      {couponLoading ? "..." : "Apply"}
-                    </button>
-                  </div>
-                )}
-                {couponError && (
-                  <p className="text-xs text-red-600 mt-1">{couponError}</p>
-                )}
               </div>
 
               <h3 className="font-semibold text-gray-900 mb-2">

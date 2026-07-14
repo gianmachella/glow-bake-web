@@ -2,8 +2,6 @@
 
 import { useEffect, useState } from "react";
 
-import Swal from "sweetalert2";
-
 const cookies = [
   {
     src: "/images/cookies/cookie-1.png",
@@ -66,49 +64,6 @@ const cookies = [
 export default function Hero() {
   const [offsetY, setOffsetY] = useState(0);
   const [isMobile, setIsMobile] = useState(false);
-
-  useEffect(() => {
-    // Modal Farmers Market (solo imagen)
-    const farmersMarketShown = localStorage.getItem("farmersMarketModalShown");
-    if (!farmersMarketShown) {
-      Swal.fire({
-        html: `
-        <img src="/images/famersmarket.png" 
-             alt="Farmers Market" 
-             style="width: 100%; height: auto; border-radius: 10px;" />
-      `,
-        confirmButtonText: "Close",
-        width: 350,
-        padding: "0",
-        showCloseButton: true,
-        backdrop: true,
-      });
-      localStorage.setItem("farmersMarketModalShown", "true");
-    }
-
-    // Modal Welcome (texto de recordatorio)
-    const welcomeShown = localStorage.getItem("welcomeModalShown");
-    if (!welcomeShown) {
-      Swal.fire({
-        title:
-          '<img src="/images/banners/Glow Bake.png" alt="Glow Bake Logo" style="max-width: 200px; margin-bottom: 1rem;" />',
-        html: `
-        <h2 style="margin-bottom: 0.5rem;">Remember!</h2>
-        <p style="text-align: left;">
-          Orders are accepted from <b>Monday to Wednesday</b> for delivery on <b>Thursday and Friday</b>.<br><br>
-          Orders placed on <b>Thursday</b> will be delivered on <b>Friday</b>.<br><br>
-          Orders placed on <b>Friday</b> will be delivered the following week.<br><br>
-          For special orders, please contact us first.
-        </p>
-      `,
-        confirmButtonText: "Got it!",
-        width: 510,
-        padding: "1.5rem",
-        showCloseButton: true,
-      });
-      localStorage.setItem("welcomeModalShown", "true");
-    }
-  }, []);
 
   useEffect(() => {
     const checkMobile = () => setIsMobile(window.innerWidth < 640);

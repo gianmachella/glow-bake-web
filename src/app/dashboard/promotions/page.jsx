@@ -922,12 +922,11 @@ function AutoDiscountsTab() {
   );
 }
 
-// ─── Web Promotions tab (claimable, code-based discounts) ───────────────────
+// ─── Web Promotions tab (advertised on the home page, applied automatically) ─
 
 const EMPTY_WEB_PROMOTION = {
   name: "",
   description: "",
-  customInstructions: "",
   appliesToAll: false,
   cookieId: "",
   type: "FIXED",
@@ -988,7 +987,6 @@ function WebPromotionsTab() {
     setForm({
       name: p.name,
       description: p.description || "",
-      customInstructions: p.customInstructions || "",
       appliesToAll: !p.cookieId,
       cookieId: p.cookieId || "",
       type: p.type,
@@ -1019,7 +1017,6 @@ function WebPromotionsTab() {
       const fd = new FormData();
       fd.append("name", form.name);
       fd.append("description", form.description);
-      fd.append("customInstructions", form.customInstructions);
       fd.append("cookieId", form.appliesToAll ? "" : form.cookieId);
       fd.append("type", form.type);
       fd.append("discountType", form.type === "VOLUME" ? form.discountType : "FIXED");
@@ -1049,7 +1046,6 @@ function WebPromotionsTab() {
     const fd = new FormData();
     fd.append("name", p.name);
     fd.append("description", p.description || "");
-    fd.append("customInstructions", p.customInstructions || "");
     fd.append("cookieId", p.cookieId || "");
     fd.append("type", p.type);
     fd.append("discountType", p.discountType);
@@ -1079,16 +1075,14 @@ function WebPromotionsTab() {
   if (loading) return <Loading />;
 
   const activeCnt = promotions.filter((p) => p.active).length;
-  const totalClaims = promotions.reduce((sum, p) => sum + p.claims.length, 0);
 
   return (
     <div>
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6">
-        <div className="grid grid-cols-3 gap-4 w-full sm:w-auto">
+        <div className="grid grid-cols-2 gap-4 w-full sm:w-auto">
           {[
             { label: "Total", value: promotions.length, col: "from-pink-100 to-pink-200 text-pink-700" },
             { label: "Active", value: activeCnt, col: "from-green-100 to-green-200 text-green-700" },
-            { label: "Claims", value: totalClaims, col: "from-blue-100 to-blue-200 text-blue-700" },
           ].map((s) => (
             <div key={s.label} className={`bg-gradient-to-br ${s.col} px-6 py-4 rounded-2xl text-center shadow-sm`}>
               <p className="text-xs font-medium opacity-70 uppercase tracking-wide">{s.label}</p>
@@ -1108,12 +1102,11 @@ function WebPromotionsTab() {
         <div className="text-center py-16 text-gray-400">
           <Gift size={44} className="mx-auto mb-3 opacity-30" />
           <p className="font-medium">No web promotions yet</p>
-          <p className="text-sm mt-1">Create a claimable discount customers redeem with a unique code</p>
+          <p className="text-sm mt-1">Create a discount that&apos;s advertised on the home page and applied automatically at checkout</p>
         </div>
       ) : (
         <div className="grid gap-4">
           {promotions.map((p, i) => {
-            const used = p.claims.filter((c) => c.used).length;
             return (
               <motion.div
                 key={p.id}
@@ -1154,7 +1147,6 @@ function WebPromotionsTab() {
                   {p.description && <p className="text-gray-500 text-sm line-clamp-1">{p.description}</p>}
                   <div className="flex flex-wrap gap-3 mt-1 text-xs text-gray-400">
                     <span>Cookie: {p.cookieId ? p.cookie?.name || "Unknown" : "All Cookies"}</span>
-                    <span>Claims: {p.claims.length} ({used} used)</span>
                     {p.startDate && <span>From: {new Date(p.startDate).toLocaleDateString()}</span>}
                     {p.endDate && <span>Until: {new Date(p.endDate).toLocaleDateString()}</span>}
                   </div>
@@ -1207,14 +1199,6 @@ function WebPromotionsTab() {
                   <textarea value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })}
                     rows={3} placeholder="Describe the promotion..."
                     className="w-full border border-gray-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-pink-300 transition resize-none" />
-                </div>
-
-                <div>
-                  <label className="block text-sm font-semibold text-gray-700 mb-1.5">Custom Instructions (optional)</label>
-                  <textarea value={form.customInstructions} onChange={(e) => setForm({ ...form, customInstructions: e.target.value })}
-                    rows={3} placeholder="e.g. Enter this code at checkout in the coupon field to redeem your discount."
-                    className="w-full border border-gray-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-pink-300 transition resize-none" />
-                  <p className="text-xs text-gray-400 mt-1">Sent in the claim email and shown after a customer claims their code.</p>
                 </div>
 
                 <div>
@@ -1336,7 +1320,7 @@ function WebPromotionsTab() {
                   </div>
                   <div>
                     <p className="font-semibold text-gray-700 text-sm">Active</p>
-                    <p className="text-gray-400 text-xs mt-0.5">Visible on the home page for customers to claim</p>
+                    <p className="text-gray-400 text-xs mt-0.5">Shown on the home page and applied automatically at checkout</p>
                   </div>
                 </label>
 
