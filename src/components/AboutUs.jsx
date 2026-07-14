@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import Image from "next/image";
 
 export default function AboutUs() {
   const [offsetY, setOffsetY] = useState(0);
@@ -60,7 +61,7 @@ export default function AboutUs() {
           </p>
           <p>
             At Glow Bake, Eleana personally selects every ingredient and pours
-            herself into every batch. Whether it's a classic chocolate chip or a
+            herself into every batch. Whether it&apos;s a classic chocolate chip or a
             bold new flavor, each cookie is a little work of art — fresh,
             flavorful, and always made to spark joy.
           </p>
@@ -69,9 +70,11 @@ export default function AboutUs() {
             family. It’s about handmade happiness, baked daily by Eleana with
             love and purpose.
           </p>
-          <img
+          <Image
             src="/images/sing.png"
             alt="Cookie Tower"
+            width={400}
+            height={213}
             className="w-[320px] md:w-[480px] lg:w-[400px] object-contain"
           />
         </div>
@@ -81,9 +84,11 @@ export default function AboutUs() {
           className="w-full flex justify-center z-10 mt-[-600px] md:mt-[-300px]"
           style={{ transform: `translateY(${offsetY * speed}px)` }}
         >
-          <img
+          <Image
             src="/images/cookies/cookies-tower.png"
             alt="Cookie Tower"
+            width={320}
+            height={960}
             className="w-[320px] md:w-[480px] lg:w-[400px] object-contain"
           />
         </div>

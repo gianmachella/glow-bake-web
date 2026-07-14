@@ -2,6 +2,7 @@
 
 import { AnimatePresence, motion } from "framer-motion";
 import { useEffect, useState } from "react";
+import Image from "next/image";
 import { X } from "lucide-react";
 
 const STORAGE_KEY = "glowbake_seen_announcements";
@@ -83,11 +84,13 @@ export default function AnnouncementPopup() {
 
             {/* Image */}
             {current.image && (
-              <div className="w-full h-52 overflow-hidden">
-                <img
+              <div className="relative w-full h-52 overflow-hidden">
+                <Image
                   src={current.image}
                   alt={current.title}
-                  className="w-full h-full object-cover"
+                  fill
+                  sizes="(min-width: 640px) 28rem, 100vw"
+                  className="object-cover"
                 />
               </div>
             )}

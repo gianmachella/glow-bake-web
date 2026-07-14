@@ -1,7 +1,22 @@
+import { z } from "zod";
 import prisma from "@/lib/prisma";
+import { requireAdmin } from "@/lib/apiAuth";
+import { parseJsonBody } from "@/lib/validate";
+
+const ingredientCreateSchema = z.object({
+  name: z.string().trim().min(1),
+  unitType: z.string().trim().min(1),
+  unitQuantity: z.coerce.number().positive(),
+  price: z.coerce.number().nonnegative(),
+  remaining: z.coerce.number().nonnegative(),
+  packages: z.coerce.number().int().nonnegative().optional().default(1),
+});
 
 // ✅ GET all ingredients
 export async function GET() {
+  const { unauthorized } = await requireAdmin();
+  if (unauthorized) return unauthorized;
+
   try {
     const ingredients = await prisma.ingredient.findMany({
       orderBy: { createdAt: "desc" },
@@ -21,18 +36,22 @@ export async function GET() {
 
 // ✅ CREATE ingredient
 export async function POST(req) {
+  const { unauthorized } = await requireAdmin();
+  if (unauthorized) return unauthorized;
+
   try {
-    const body = await req.json();
-    const { name, unitType, unitQuantity, price, remaining, packages } = body;
+    const { data, response } = await parseJsonBody(req, ingredientCreateSchema);
+    if (response) return response;
+    const { name, unitType, unitQuantity, price, remaining, packages } = data;
 
     const newIngredient = await prisma.ingredient.create({
       data: {
         name,
         unitType: unitType.toLowerCase(),
-        unitQuantity: parseFloat(unitQuantity),
-        price: parseFloat(price),
-        remaining: parseFloat(remaining),
-        packages: parseInt(packages ?? 1),
+        unitQuantity,
+        price,
+        remaining,
+        packages,
       },
     });
 

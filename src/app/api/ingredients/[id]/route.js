@@ -1,9 +1,27 @@
+import { z } from "zod";
 import prisma from "@/lib/prisma";
+import { requireAdmin } from "@/lib/apiAuth";
+import { parseJsonBody } from "@/lib/validate";
+
+const ingredientUpdateSchema = z.object({
+  name: z.string().trim().min(1),
+  unitType: z.string().trim().min(1),
+  unitQuantity: z.coerce.number().positive(),
+  price: z.coerce.number().nonnegative(),
+  remaining: z.coerce.number().nonnegative().optional(),
+  packages: z.coerce.number().int().nonnegative().optional(),
+  addPackage: z.boolean().optional(),
+  removePackage: z.boolean().optional(),
+});
 
 export async function PUT(req, context) {
+  const { unauthorized } = await requireAdmin();
+  if (unauthorized) return unauthorized;
+
   try {
     const { id } = await context.params;
-    const body = await req.json();
+    const { data: body, response } = await parseJsonBody(req, ingredientUpdateSchema);
+    if (response) return response;
     const {
       name,
       unitType,
@@ -38,8 +56,8 @@ export async function PUT(req, context) {
       data: {
         name,
         unitType,
-        unitQuantity: parseFloat(unitQuantity),
-        price: parseFloat(price),
+        unitQuantity,
+        price,
         remaining: newRemaining,
         packages: newPackages,
       },
@@ -59,6 +77,9 @@ export async function PUT(req, context) {
 }
 
 export async function DELETE(req, { params }) {
+  const { unauthorized } = await requireAdmin();
+  if (unauthorized) return unauthorized;
+
   try {
     const { id } = params;
 

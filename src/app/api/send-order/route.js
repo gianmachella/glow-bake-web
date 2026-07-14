@@ -1,10 +1,39 @@
 // app/api/send-order/route.js
 import { Resend } from "resend";
+import { z } from "zod";
 import prisma from "@/lib/prisma";
+import { parseJsonBody } from "@/lib/validate";
+import { apiError } from "@/lib/apiResponse";
+import { computeLineItems } from "@/lib/discounts";
+import { isWithinDateWindow, startOfDay } from "@/lib/dateWindow";
+
+const orderItemSchema = z.object({
+  id: z.string().min(1),
+  name: z.string().min(1),
+  quantity: z.number().int().positive(),
+  price: z.number().nonnegative(),
+  flavors: z.record(z.string(), z.number()).optional(),
+});
+
+const orderSchema = z.object({
+  name: z.string().trim().min(1),
+  lastName: z.string().trim().min(1),
+  email: z.string().trim().email(),
+  phone: z.string().trim().min(1),
+  address: z.string().trim().optional(),
+  deliveryMethod: z.enum(["Pickup", "Delivery"]),
+  deliveryDay: z.string().min(1),
+  notes: z.string().optional(),
+  total: z.number().nonnegative(),
+  deliveryFee: z.number().nonnegative().optional().default(0),
+  items: z.array(orderItemSchema).min(1),
+  couponCode: z.string().trim().min(1).optional(),
+});
 
 export async function POST(req) {
   try {
-    const body = await req.json();
+    const { data, response } = await parseJsonBody(req, orderSchema);
+    if (response) return response;
     const {
       name,
       lastName,
@@ -14,50 +43,124 @@ export async function POST(req) {
       deliveryMethod,
       deliveryDay,
       notes,
-      total,
       items,
-      deliveryFee = 0,
-    } = body;
+      deliveryFee,
+      couponCode,
+    } = data;
 
-    console.log("🛒 Items recibidos:", items);
+    // 🔒 Recompute prices/total from the database — never trust client-submitted
+    // per-item price, so automatic cookie discounts (and the base price) can't be spoofed.
+    const cookieIds = items.map((item) => item.id);
+    const cookies = await prisma.cookie.findMany({
+      where: { id: { in: cookieIds } },
+    });
+    const cookieById = new Map(cookies.map((c) => [c.id, c]));
 
-    if (!email || !email.includes("@")) {
-      return new Response("Invalid email", { status: 400 });
+    const missingIds = cookieIds.filter((id) => !cookieById.has(id));
+    if (missingIds.length > 0) {
+      return apiError("One or more items in your cart are no longer available", 400);
     }
 
-    // 1️⃣ Crear o conectar cliente
-    const customer = await prisma.customer.upsert({
-      where: { email },
-      update: { name, lastName, phone, address },
-      create: { name, lastName, email, phone, address },
+    const now = new Date();
+    const activeAutoDiscounts = await prisma.autoDiscount.findMany({
+      where: {
+        cookieId: { in: cookieIds },
+        active: true,
+        OR: [{ startDate: null }, { startDate: { lte: now } }],
+        AND: [{ OR: [{ endDate: null }, { endDate: { gte: startOfDay(now) } }] }],
+      },
     });
+    const discountsByCookieId = activeAutoDiscounts.reduce((acc, d) => {
+      (acc[d.cookieId] ||= []).push(d);
+      return acc;
+    }, {});
 
-    // 2️⃣ Crear venta con items
-    const sale = await prisma.sale.create({
-      data: {
-        customer: { connect: { id: customer.id } },
-        total: total + (deliveryMethod === "Delivery" ? deliveryFee : 0),
-        deliveryDay, // 👈 ahora sí es válido
-        deliveryMethod,
-        items: {
-          create: items.map((item) => ({
-            cookieId: item.id,
-            quantity: item.quantity,
-            price: item.price,
-          })),
+    // 🎟️ Validate a claimed web-promotion coupon code, if one was submitted —
+    // never trust the discount the client thinks applies, re-check it here.
+    let claim = null;
+    const globalDiscounts = [];
+    if (couponCode) {
+      claim = await prisma.webPromotionClaim.findUnique({
+        where: { code: couponCode.trim().toUpperCase() },
+        include: { webPromotion: true },
+      });
+      if (!claim) return apiError("Invalid coupon code", 400);
+      if (claim.used) return apiError("This coupon code has already been used", 400);
+
+      const wp = claim.webPromotion;
+      const promotionValid = wp.active && isWithinDateWindow(wp.startDate, wp.endDate, now);
+      if (!promotionValid) return apiError("This promotion is no longer active", 400);
+
+      const discountEntry = {
+        active: true,
+        discountType: wp.discountType,
+        discountValue: wp.discountValue,
+        minQuantity: wp.minQuantity,
+      };
+      if (wp.cookieId) {
+        (discountsByCookieId[wp.cookieId] ||= []).push(discountEntry);
+      } else {
+        globalDiscounts.push(discountEntry); // no cookieId = applies to every cookie
+      }
+    }
+
+    const { items: computedItems, subtotal } = computeLineItems(
+      items.map((item) => ({ ...item, price: cookieById.get(item.id).price })),
+      discountsByCookieId,
+      globalDiscounts,
+      now
+    );
+
+    const total = subtotal;
+
+    // 1️⃣ Crear o conectar cliente, crear venta con items, y marcar el cupón como
+    // usado — todo en una sola transacción para que un cupón no pueda reutilizarse
+    // en una condición de carrera.
+    const sale = await prisma.$transaction(async (tx) => {
+      const customer = await tx.customer.upsert({
+        where: { email },
+        update: { name, lastName, phone, address },
+        create: { name, lastName, email, phone, address },
+      });
+
+      const newSale = await tx.sale.create({
+        data: {
+          customer: { connect: { id: customer.id } },
+          total: total + (deliveryMethod === "Delivery" ? deliveryFee : 0),
+          deliveryDay, // 👈 ahora sí es válido
+          deliveryMethod,
+          items: {
+            create: computedItems.map((item) => ({
+              cookieId: item.id,
+              quantity: item.quantity,
+              price: item.unitPrice,
+            })),
+          },
         },
-      },
-      include: {
-        items: {
-          include: { cookie: true },
+        include: {
+          items: {
+            include: { cookie: true },
+          },
         },
-      },
+      });
+
+      if (claim) {
+        const redeemed = await tx.webPromotionClaim.updateMany({
+          where: { id: claim.id, used: false },
+          data: { used: true, usedAt: new Date() },
+        });
+        if (redeemed.count === 0) {
+          throw new Error("COUPON_ALREADY_USED");
+        }
+      }
+
+      return newSale;
     });
 
     // 📧 Emails
     const resend = new Resend(process.env.RESEND_API_KEY);
 
-    const itemList = items
+    const itemList = computedItems
       .map((item) => {
         const flavorList =
           item.flavors && Object.keys(item.flavors).length > 0
@@ -70,7 +173,7 @@ export async function POST(req) {
             : "";
 
         return `<li style="margin-bottom: 10px;">
-                  <strong>${item.quantity}</strong> x ${item.name} - $${item.price.toFixed(2)}
+                  <strong>${item.quantity}</strong> x ${item.name} - $${item.unitPrice.toFixed(2)}
                   ${flavorList}
                 </li>`;
       })
@@ -144,7 +247,7 @@ ${deliveryMethod} Day: ${deliveryDay}
 Notes: ${notes || "None"}
 
 Order:
-${items
+${computedItems
   .map((item) => {
     const flavors =
       item.flavors && Object.keys(item.flavors).length > 0
@@ -153,7 +256,7 @@ ${items
             .map(([flavor, qty]) => `    - ${flavor}: ${qty}`)
             .join("\n")
         : "";
-    return `- ${item.quantity} x ${item.name} ($${item.price.toFixed(2)})${
+    return `- ${item.quantity} x ${item.name} ($${item.unitPrice.toFixed(2)})${
       flavors ? "\n" + flavors : ""
     }`;
   })
@@ -162,24 +265,33 @@ ${deliveryMethod === "Delivery" ? `- Delivery Fee: $${deliveryFee.toFixed(2)}` :
 Total: $${grandTotal.toFixed(2)}
 `;
 
-    await resend.emails.send({
+    const { error: customerEmailError } = await resend.emails.send({
       from: "Glow Bake <hello@glowbake.com>",
       to: email,
       subject: "Your Glow Bake Order Confirmation",
       html: htmlMessage,
       reply_to: "glowbakesosweet@gmail.com",
     });
+    if (customerEmailError) {
+      console.error("Resend error (customer email):", { name: customerEmailError.name, message: customerEmailError.message, statusCode: customerEmailError.statusCode });
+    }
 
-    await resend.emails.send({
+    const { error: ownerEmailError } = await resend.emails.send({
       from: "Glow Bake <hello@glowbake.com>",
       to: "glowbakesosweet@gmail.com",
       subject: `📦 New Order Received - ${name} `,
       text: ownerMessage,
       reply_to: "glowbakesosweet@gmail.com",
     });
+    if (ownerEmailError) {
+      console.error("Resend error (owner email):", { name: ownerEmailError.name, message: ownerEmailError.message, statusCode: ownerEmailError.statusCode });
+    }
 
     return new Response(JSON.stringify(sale), { status: 200 });
   } catch (err) {
+    if (err.message === "COUPON_ALREADY_USED") {
+      return apiError("This coupon code has already been used", 400);
+    }
     console.error("❌ Error processing order:", err);
     return new Response("Error processing order", { status: 500 });
   }

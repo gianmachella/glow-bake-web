@@ -3,6 +3,7 @@ import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import prisma from "@/lib/prisma";
 import { supabase } from "@/lib/supabase";
+import { startOfDay } from "@/lib/dateWindow";
 
 async function uploadImage(file) {
   const filename = `announcements/${Date.now()}-${file.name}`;
@@ -20,7 +21,7 @@ export async function GET() {
     where: {
       enabled: true,
       OR: [{ startDate: null }, { startDate: { lte: now } }],
-      AND: [{ OR: [{ endDate: null }, { endDate: { gte: now } }] }],
+      AND: [{ OR: [{ endDate: null }, { endDate: { gte: startOfDay(now) } }] }],
     },
     orderBy: { createdAt: "desc" },
   });

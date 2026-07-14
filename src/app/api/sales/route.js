@@ -1,18 +1,50 @@
 import { NextResponse } from "next/server";
 import { Resend } from "resend";
+import { z } from "zod";
 import prisma from "@/lib/prisma";
+import { requireAdmin } from "@/lib/apiAuth";
+import { parseJsonBody } from "@/lib/validate";
 
-// 1. LISTAR VENTAS (GET)
-export async function GET() {
+const saleItemSchema = z.object({
+  cookieId: z.string().min(1),
+  quantity: z.number().int().positive(),
+  price: z.number().nonnegative(),
+  name: z.string().optional(),
+});
+
+const saleCreateSchema = z.object({
+  customerEmail: z.union([z.string().trim().email(), z.literal("")]).optional(),
+  items: z.array(saleItemSchema).min(1),
+  deliveryDay: z.string().optional(),
+  paymentMethod: z.string().optional(),
+  total: z.number().nonnegative(),
+});
+
+// 1. LISTAR VENTAS (GET) — paginated via ?take & ?cursor
+export async function GET(req) {
+  const { unauthorized } = await requireAdmin();
+  if (unauthorized) return unauthorized;
+
   try {
+    const { searchParams } = new URL(req.url);
+    const take = Math.min(parseInt(searchParams.get("take")) || 50, 200);
+    const cursor = searchParams.get("cursor");
+
     const sales = await prisma.sale.findMany({
+      take: take + 1,
+      ...(cursor && { cursor: { id: cursor }, skip: 1 }),
       orderBy: { createdAt: "desc" },
       include: {
         customer: true,
         items: { include: { cookie: true } },
       },
     });
-    return NextResponse.json(sales);
+
+    const hasMore = sales.length > take;
+    const data = hasMore ? sales.slice(0, take) : sales;
+    const nextCursor = hasMore ? data[data.length - 1].id : null;
+
+    return NextResponse.json({ data, nextCursor });
   } catch (error) {
     return NextResponse.json(
       { error: "Error fetching sales" },
@@ -23,8 +55,12 @@ export async function GET() {
 
 // 2. CREAR VENTA (POST)
 export async function POST(req) {
+  const { unauthorized } = await requireAdmin();
+  if (unauthorized) return unauthorized;
+
   try {
-    const body = await req.json();
+    const { data: body, response } = await parseJsonBody(req, saleCreateSchema);
+    if (response) return response;
     const { customerEmail, items, deliveryDay, paymentMethod, total } = body;
 
     const finalEmail = customerEmail
@@ -143,6 +179,9 @@ export async function POST(req) {
 
 // 3. ELIMINAR VENTA (DELETE)
 export async function DELETE(req) {
+  const { unauthorized } = await requireAdmin();
+  if (unauthorized) return unauthorized;
+
   try {
     const { searchParams } = new URL(req.url);
     const id = searchParams.get("id");

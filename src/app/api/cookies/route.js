@@ -1,5 +1,6 @@
 import prisma from "@/lib/prisma";
 import { supabase } from "@/lib/supabase";
+import { requireAdmin } from "@/lib/apiAuth";
 
 async function uploadToSupabase(file) {
   const filename = `${Date.now()}-${file.name}`;
@@ -60,6 +61,9 @@ export async function GET() {
 
 // 📍 POST
 export async function POST(req) {
+  const { unauthorized } = await requireAdmin();
+  if (unauthorized) return unauthorized;
+
   try {
     const formData = await req.formData();
     const name = formData.get("name");
@@ -113,6 +117,9 @@ export async function POST(req) {
 
 // 📍 PUT
 export async function PUT(req) {
+  const { unauthorized } = await requireAdmin();
+  if (unauthorized) return unauthorized;
+
   try {
     const contentType = req.headers.get("content-type") || "";
 
@@ -186,6 +193,9 @@ export async function PUT(req) {
 
 // 📍 DELETE (soft/hard)
 export async function DELETE(req) {
+  const { unauthorized } = await requireAdmin();
+  if (unauthorized) return unauthorized;
+
   try {
     const { id, soft } = await req.json();
     if (!id) {

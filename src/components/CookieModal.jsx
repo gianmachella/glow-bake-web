@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 
+import Image from "next/image";
 import Swal from "sweetalert2";
 import { useCart } from "@/context/CartContext";
 
@@ -91,11 +92,13 @@ export default function CookieModal({ cookie, onClose }) {
           &times;
         </button>
 
-        <div className="w-full mb-4 overflow-hidden rounded-xl">
-          <img
+        <div className="relative w-full aspect-square mb-4 overflow-hidden rounded-xl">
+          <Image
             src={cookie.images[current]}
             alt={cookie.name}
-            className="w-full h-auto object-contain transition-all duration-500"
+            fill
+            sizes="(min-width: 768px) 28rem, 100vw"
+            className="object-contain transition-all duration-500"
           />
         </div>
 

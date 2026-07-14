@@ -25,6 +25,8 @@ model Cookie {
   doughInventories  DoughInventory[]
   recipes           Recipe[]
   saleItems         SaleItem[]
+  autoDiscounts     AutoDiscount[]
+  webPromotions     WebPromotion[]
 }
 
 model Ingredient {
@@ -255,4 +257,67 @@ enum DiscountType {
 enum TargetType {
   ALL
   SPECIFIC
+}
+
+model AutoDiscount {
+  id            String           @id @default(cuid())
+  cookieId      String
+  type          AutoDiscountType
+  discountType  DiscountType     @default(FIXED)
+  discountValue Float
+  minQuantity   Int              @default(1)
+  active        Boolean          @default(true)
+  startDate     DateTime?
+  endDate       DateTime?
+  createdAt     DateTime         @default(now())
+  updatedAt     DateTime         @updatedAt
+  cookie        Cookie           @relation(fields: [cookieId], references: [id], onDelete: Cascade)
+
+  @@index([cookieId])
+}
+
+enum AutoDiscountType {
+  FIXED
+  VOLUME
+}
+
+// A claimable web promotion: admin defines a per-cookie Fixed/Volume discount
+// rule (same shape as AutoDiscount) behind a name/description/banner. Visitors
+// claim it on the home page with their name + email and receive a unique,
+// single-use code (WebPromotionClaim) to redeem at checkout.
+model WebPromotion {
+  id            String              @id @default(cuid())
+  name          String
+  description   String?             @db.Text
+  image         String?
+  customInstructions String?        @db.Text // shown on the claim card/drawer and in the claim email
+  cookieId      String? // null = applies to every cookie, not just one
+  type          AutoDiscountType
+  discountType  DiscountType        @default(FIXED)
+  discountValue Float
+  minQuantity   Int                 @default(1)
+  active        Boolean             @default(true)
+  startDate     DateTime?
+  endDate       DateTime?
+  createdAt     DateTime            @default(now())
+  updatedAt     DateTime            @updatedAt
+  cookie        Cookie?             @relation(fields: [cookieId], references: [id], onDelete: Cascade)
+  claims        WebPromotionClaim[]
+
+  @@index([cookieId])
+}
+
+model WebPromotionClaim {
+  id             String       @id @default(cuid())
+  webPromotionId String
+  code           String       @unique
+  name           String
+  email          String
+  used           Boolean      @default(false)
+  usedAt         DateTime?
+  createdAt      DateTime     @default(now())
+  webPromotion   WebPromotion @relation(fields: [webPromotionId], references: [id], onDelete: Cascade)
+
+  @@unique([webPromotionId, email])
+  @@index([webPromotionId])
 }

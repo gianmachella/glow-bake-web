@@ -1,12 +1,50 @@
+import { z } from "zod";
 import prisma from "@/lib/prisma";
+import { requireAdmin } from "@/lib/apiAuth";
+import { parseJsonBody } from "@/lib/validate";
 
-// 📍 GET → listar clientes
-export async function GET() {
+const customerCreateSchema = z.object({
+  name: z.string().trim().min(1),
+  lastName: z.string().trim().optional(),
+  email: z.union([z.string().trim().email(), z.literal("")]).optional(),
+  phone: z.string().trim().optional(),
+  address: z.string().trim().optional(),
+});
+
+const customerUpdateSchema = z.object({
+  id: z.string().min(1),
+  name: z.string().trim().min(1).optional(),
+  lastName: z.string().trim().optional(),
+  email: z.union([z.string().trim().email(), z.literal("")]).optional(),
+  phone: z.string().trim().optional(),
+  address: z.string().trim().optional(),
+});
+
+const customerDeleteSchema = z.object({
+  id: z.string().min(1),
+});
+
+// 📍 GET → listar clientes (paginated via ?take & ?cursor)
+export async function GET(req) {
+  const { unauthorized } = await requireAdmin();
+  if (unauthorized) return unauthorized;
+
   try {
+    const { searchParams } = new URL(req.url);
+    const take = Math.min(parseInt(searchParams.get("take")) || 50, 200);
+    const cursor = searchParams.get("cursor");
+
     const customers = await prisma.customer.findMany({
+      take: take + 1,
+      ...(cursor && { cursor: { id: cursor }, skip: 1 }),
       orderBy: { createdAt: "desc" },
     });
-    return new Response(JSON.stringify(customers), {
+
+    const hasMore = customers.length > take;
+    const data = hasMore ? customers.slice(0, take) : customers;
+    const nextCursor = hasMore ? data[data.length - 1].id : null;
+
+    return new Response(JSON.stringify({ data, nextCursor }), {
       status: 200,
       headers: { "Content-Type": "application/json" },
     });
@@ -20,13 +58,14 @@ export async function GET() {
 
 // 📍 POST → crear cliente
 export async function POST(req) {
-  try {
-    const body = await req.json();
-    const { name, lastName, email, phone, address } = body;
+  const { unauthorized } = await requireAdmin();
+  if (unauthorized) return unauthorized;
 
-    const customer = await prisma.customer.create({
-      data: { name, lastName, email, phone, address },
-    });
+  try {
+    const { data, response } = await parseJsonBody(req, customerCreateSchema);
+    if (response) return response;
+
+    const customer = await prisma.customer.create({ data });
 
     return new Response(JSON.stringify(customer), { status: 201 });
   } catch (err) {
@@ -39,9 +78,13 @@ export async function POST(req) {
 
 // 📍 PUT → actualizar cliente
 export async function PUT(req) {
+  const { unauthorized } = await requireAdmin();
+  if (unauthorized) return unauthorized;
+
   try {
-    const body = await req.json();
-    const { id, ...updates } = body;
+    const { data, response } = await parseJsonBody(req, customerUpdateSchema);
+    if (response) return response;
+    const { id, ...updates } = data;
 
     const customer = await prisma.customer.update({
       where: { id },
@@ -59,9 +102,13 @@ export async function PUT(req) {
 
 // 📍 DELETE → eliminar cliente
 export async function DELETE(req) {
+  const { unauthorized } = await requireAdmin();
+  if (unauthorized) return unauthorized;
+
   try {
-    const body = await req.json();
-    const { id } = body;
+    const { data, response } = await parseJsonBody(req, customerDeleteSchema);
+    if (response) return response;
+    const { id } = data;
 
     await prisma.customer.delete({ where: { id } });
 

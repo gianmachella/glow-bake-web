@@ -11,13 +11,25 @@ async function recalcCookieCost(cookieId) {
   return recipes.reduce((acc, recipe) => acc + recipe.totalCost, 0);
 }
 
+import { z } from "zod";
 import { convertQuantity } from "@/utils/convertQuantity";
+import { requireAdmin } from "@/lib/apiAuth";
+import { parseJsonBody } from "@/lib/validate";
+
+const updateRecipeIngredientSchema = z.object({
+  quantityUsed: z.coerce.number().nonnegative(),
+  unitType: z.string().min(1),
+});
 
 // PUT: actualizar ingrediente en receta
 export async function PUT(req, { params }) {
+  const { unauthorized } = await requireAdmin();
+  if (unauthorized) return unauthorized;
+
   try {
     const { ingredientId, id: cookieId } = params;
-    const body = await req.json();
+    const { data: body, response } = await parseJsonBody(req, updateRecipeIngredientSchema);
+    if (response) return response;
     const { quantityUsed, unitType } = body;
 
     const recipeIngredient = await prisma.recipeIngredient.findUnique({
@@ -36,7 +48,7 @@ export async function PUT(req, { params }) {
     });
 
     const qtyInInventoryUnit = convertQuantity(
-      Number(quantityUsed) || 0,
+      quantityUsed,
       unitType,
       dbIngredient.unitType
     );
@@ -76,6 +88,9 @@ export async function PUT(req, { params }) {
 
 // DELETE: eliminar ingrediente de receta
 export async function DELETE(_, { params }) {
+  const { unauthorized } = await requireAdmin();
+  if (unauthorized) return unauthorized;
+
   try {
     const { ingredientId, id: cookieId } = params;
 

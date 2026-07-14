@@ -3,6 +3,7 @@
 import { ChevronLeft, ChevronRight, TriangleAlert } from "lucide-react";
 import { useEffect, useState } from "react";
 
+import Image from "next/image";
 import Link from "next/link";
 import { useCart } from "@/context/CartContext";
 
@@ -60,11 +61,15 @@ export default function CookieDetailPage({ params }) {
       <div className="w-full max-w-5xl mx-auto px-6 py-10 pt-30">
         {/* Carousel */}
         <div className="w-full mb-6 flex flex-col items-center">
-          <img
-            src={cookie.images?.[current] || cookie.image}
-            alt={cookie.name}
-            className="w-full max-w-md rounded-xl border shadow"
-          />
+          <div className="relative w-full max-w-md aspect-square">
+            <Image
+              src={cookie.images?.[current] || cookie.image}
+              alt={cookie.name}
+              fill
+              sizes="(min-width: 768px) 28rem, 100vw"
+              className="rounded-xl border shadow object-contain"
+            />
+          </div>
           {cookie.images?.length > 1 && (
             <div className="mt-3 flex items-center gap-4 text-gray-600 text-sm">
               <button onClick={handlePrev} className="p-2 hover:text-pink-600">
@@ -170,9 +175,11 @@ export default function CookieDetailPage({ params }) {
           {suggested.map((c) => (
             <Link key={c.id} href={`/cookies/${c.id}`}>
               <div className="bg-white shadow rounded-lg p-3 flex flex-col items-center hover:scale-105 transition">
-                <img
+                <Image
                   src={c.image}
                   alt={c.name}
+                  width={96}
+                  height={96}
                   className="w-24 h-24 object-cover rounded-full mb-2"
                 />
                 <p className="text-sm font-medium text-center text-gray-700">

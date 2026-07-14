@@ -1,12 +1,17 @@
 import { Resend } from "resend";
+import { z } from "zod";
+import { parseJsonBody } from "@/lib/validate";
+
+const contactSchema = z.object({
+  name: z.string().trim().min(1),
+  email: z.string().trim().email(),
+  message: z.string().trim().min(1),
+});
 
 export async function POST(req) {
-  const body = await req.json();
-  const { name, email, message } = body;
-
-  if (!email || !email.includes("@") || !name || !message) {
-    return new Response("Invalid input", { status: 400 });
-  }
+  const { data, response } = await parseJsonBody(req, contactSchema);
+  if (response) return response;
+  const { name, email, message } = data;
 
   const resend = new Resend(process.env.RESEND_API_KEY);
 
@@ -21,7 +26,7 @@ ${message}
 `;
 
   try {
-    const response = await resend.emails.send({
+    await resend.emails.send({
       from: "Glow Bake <hello@glowbake.com>",
       to: "glowbakesosweet@gmail.com",
       subject: "New Contact Message",

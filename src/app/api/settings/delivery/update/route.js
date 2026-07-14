@@ -1,9 +1,29 @@
 import { NextResponse } from "next/server";
+import { z } from "zod";
 import prisma from "@/lib/prisma";
+import { requireAdmin } from "@/lib/apiAuth";
+import { parseJsonBody } from "@/lib/validate";
+
+const deliverySettingsSchema = z.object({
+  enableSaturday: z.boolean(),
+  extraDays: z.any(),
+  specialDates: z
+    .array(
+      z.object({
+        productId: z.string().min(1),
+        date: z.string().min(1),
+      })
+    )
+    .optional(),
+});
 
 export async function POST(req) {
+  const { unauthorized } = await requireAdmin();
+  if (unauthorized) return unauthorized;
+
   try {
-    const body = await req.json();
+    const { data: body, response } = await parseJsonBody(req, deliverySettingsSchema);
+    if (response) return response;
 
     const { enableSaturday, extraDays, specialDates } = body;
 

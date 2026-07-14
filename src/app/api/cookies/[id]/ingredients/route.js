@@ -1,5 +1,25 @@
 import { NextResponse } from "next/server";
+import { z } from "zod";
 import prisma from "@/lib/prisma";
+import { requireAdmin } from "@/lib/apiAuth";
+import { parseJsonBody } from "@/lib/validate";
+
+const addIngredientSchema = z.object({
+  baseDoughId: z.string().min(1),
+  ingredientId: z.string().min(1),
+  quantityUsed: z.coerce.number().positive(),
+  unit: z.string().min(1),
+});
+
+const updateIngredientSchema = z.object({
+  cookieIngredientId: z.string().min(1),
+  quantityUsed: z.coerce.number().positive(),
+  unit: z.string().min(1),
+});
+
+const deleteIngredientSchema = z.object({
+  cookieIngredientId: z.string().min(1),
+});
 
 // 🔧 recalcula costo total de la cookie según sus recetas
 async function recalcCookieCost(cookieId) {
@@ -21,6 +41,9 @@ import { convertQuantity } from "@/utils/convertQuantity";
 
 // GET: lista de ingredientes de la receta de una cookie
 export async function GET(req, { params }) {
+  const { unauthorized } = await requireAdmin();
+  if (unauthorized) return unauthorized;
+
   try {
     const { id } = params;
 
@@ -39,16 +62,14 @@ export async function GET(req, { params }) {
 }
 
 export async function POST(req, { params }) {
+  const { unauthorized } = await requireAdmin();
+  if (unauthorized) return unauthorized;
+
   try {
     const { id } = await params; // cookieId
-    const { baseDoughId, ingredientId, quantityUsed, unit } = await req.json();
-
-    if (!ingredientId || !quantityUsed || !unit || !baseDoughId) {
-      return NextResponse.json(
-        { error: "Faltan campos requeridos" },
-        { status: 400 }
-      );
-    }
+    const { data, response } = await parseJsonBody(req, addIngredientSchema);
+    if (response) return response;
+    const { baseDoughId, ingredientId, quantityUsed, unit } = data;
 
     // buscar o crear receta
     let recipe = await prisma.recipe.findFirst({
@@ -72,7 +93,7 @@ export async function POST(req, { params }) {
       );
     }
 
-    const qty = parseFloat(quantityUsed);
+    const qty = quantityUsed;
     const cost = (dbIngredient.price / dbIngredient.unitQuantity) * qty;
 
     await prisma.recipeIngredient.create({
@@ -105,16 +126,14 @@ export async function POST(req, { params }) {
 
 // PUT: actualizar ingrediente de una cookie
 export async function PUT(req, { params }) {
+  const { unauthorized } = await requireAdmin();
+  if (unauthorized) return unauthorized;
+
   try {
     const { id } = await params;
-    const { cookieIngredientId, quantityUsed, unit } = await req.json();
-
-    if (!cookieIngredientId) {
-      return NextResponse.json(
-        { error: "Falta cookieIngredientId" },
-        { status: 400 }
-      );
-    }
+    const { data, response } = await parseJsonBody(req, updateIngredientSchema);
+    if (response) return response;
+    const { cookieIngredientId, quantityUsed, unit } = data;
 
     const dbCI = await prisma.cookieIngredient.findUnique({
       where: { id: cookieIngredientId },
@@ -148,15 +167,13 @@ export async function PUT(req, { params }) {
 
 // DELETE: eliminar ingrediente de una cookie
 export async function DELETE(req, { params }) {
-  try {
-    const { cookieIngredientId } = await req.json();
+  const { unauthorized } = await requireAdmin();
+  if (unauthorized) return unauthorized;
 
-    if (!cookieIngredientId) {
-      return NextResponse.json(
-        { error: "Falta cookieIngredientId" },
-        { status: 400 }
-      );
-    }
+  try {
+    const { data, response } = await parseJsonBody(req, deleteIngredientSchema);
+    if (response) return response;
+    const { cookieIngredientId } = data;
 
     await prisma.cookieIngredient.delete({
       where: { id: cookieIngredientId },

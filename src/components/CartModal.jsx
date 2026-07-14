@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 
+import Image from "next/image";
 import Swal from "sweetalert2";
 import { useCart } from "@/context/CartContext";
 
@@ -108,9 +109,11 @@ export default function CartModal({ onClose }) {
                   key={idx}
                   className="flex items-center gap-3 border-b pb-2"
                 >
-                  <img
+                  <Image
                     src={item.images[0]}
                     alt={item.name}
+                    width={56}
+                    height={56}
                     className="w-14 h-14 object-cover rounded"
                   />
                   <div className="flex-1">

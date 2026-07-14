@@ -1,4 +1,5 @@
 import prisma from "@/lib/prisma";
+import { requireAdmin } from "@/lib/apiAuth";
 
 function getWeekRange() {
   const now = new Date();
@@ -26,6 +27,9 @@ function getWeekRange() {
 }
 
 export async function GET() {
+  const { unauthorized } = await requireAdmin();
+  if (unauthorized) return unauthorized;
+
   try {
     const { startOfWeek, endOfWeek } = getWeekRange();
 

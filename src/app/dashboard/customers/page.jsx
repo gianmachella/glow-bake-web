@@ -8,9 +8,11 @@ import Swal from "sweetalert2";
 
 export default function CustomersPage() {
   const [customers, setCustomers] = useState([]);
+  const [nextCursor, setNextCursor] = useState(null);
   const [isOpen, setIsOpen] = useState(false);
   const [isEdit, setIsEdit] = useState(false);
   const [loading, setLoading] = useState(true);
+  const [loadingMore, setLoadingMore] = useState(false);
   const [form, setForm] = useState({
     id: null,
     name: "",
@@ -20,22 +22,31 @@ export default function CustomersPage() {
     address: "",
   });
 
+  async function fetchCustomers({ cursor } = {}) {
+    try {
+      const url = cursor ? `/api/customers?cursor=${cursor}` : "/api/customers";
+      const res = await fetch(url);
+      if (!res.ok) throw new Error("Failed to fetch customers");
+      const { data, nextCursor: newCursor } = await res.json();
+      setCustomers((prev) => (cursor ? [...prev, ...data] : data));
+      setNextCursor(newCursor);
+    } catch {
+      Swal.fire("Error", "Could not load customers", "error");
+    } finally {
+      setLoading(false);
+      setLoadingMore(false);
+    }
+  }
+
   // Load customers
   useEffect(() => {
-    async function fetchCustomers() {
-      try {
-        const res = await fetch("/api/customers");
-        if (!res.ok) throw new Error("Failed to fetch customers");
-        const data = await res.json();
-        setCustomers(data);
-      } catch {
-        Swal.fire("Error", "Could not load customers", "error");
-      } finally {
-        setLoading(false);
-      }
-    }
     fetchCustomers();
   }, []);
+
+  const handleLoadMore = () => {
+    setLoadingMore(true);
+    fetchCustomers({ cursor: nextCursor });
+  };
 
   const handleChange = (e) => {
     setForm({ ...form, [e.target.name]: e.target.value });
@@ -180,6 +191,18 @@ export default function CustomersPage() {
           </tbody>
         </table>
       </div>
+
+      {nextCursor && (
+        <div className="flex justify-center mt-8">
+          <button
+            onClick={handleLoadMore}
+            disabled={loadingMore}
+            className="px-6 py-2.5 bg-pink-500 hover:bg-pink-600 disabled:opacity-60 text-white rounded-xl shadow font-medium transition"
+          >
+            {loadingMore ? "Loading..." : "Load More"}
+          </button>
+        </div>
+      )}
 
       {/* Modal */}
       <AnimatePresence>

@@ -1,9 +1,22 @@
 import { NextResponse } from "next/server";
+import { z } from "zod";
 import prisma from "@/lib/prisma";
+import { requireAdmin } from "@/lib/apiAuth";
+import { parseJsonBody } from "@/lib/validate";
 
+const redeemSchema = z.object({
+  id: z.string().min(1),
+});
+
+// Staff-only: redeemed via the QR scanner on the /dashboard/promotions page
 export async function POST(request) {
+  const { unauthorized } = await requireAdmin();
+  if (unauthorized) return unauthorized;
+
   try {
-    const { id } = await request.json();
+    const { data, response } = await parseJsonBody(request, redeemSchema);
+    if (response) return response;
+    const { id } = data;
 
     const promo = await prisma.promotion.findUnique({ where: { id } });
 

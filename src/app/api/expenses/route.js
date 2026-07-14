@@ -1,7 +1,30 @@
+import { z } from "zod";
 import prisma from "@/lib/prisma";
+import { requireAdmin } from "@/lib/apiAuth";
+import { parseJsonBody } from "@/lib/validate";
+
+const expenseCreateSchema = z.object({
+  description: z.string().trim().min(1),
+  amount: z.coerce.number().nonnegative(),
+  category: z.string().trim().optional(),
+});
+
+const expenseUpdateSchema = z.object({
+  id: z.string().min(1),
+  description: z.string().trim().min(1).optional(),
+  amount: z.coerce.number().nonnegative().optional(),
+  category: z.string().trim().optional(),
+});
+
+const expenseDeleteSchema = z.object({
+  id: z.string().min(1),
+});
 
 // 📍 GET → listar gastos
 export async function GET() {
+  const { unauthorized } = await requireAdmin();
+  if (unauthorized) return unauthorized;
+
   try {
     const expenses = await prisma.expense.findMany({
       orderBy: { createdAt: "desc" },
@@ -20,13 +43,14 @@ export async function GET() {
 
 // 📍 POST → crear gasto
 export async function POST(req) {
-  try {
-    const body = await req.json();
-    const { description, amount } = body;
+  const { unauthorized } = await requireAdmin();
+  if (unauthorized) return unauthorized;
 
-    const expense = await prisma.expense.create({
-      data: { description, amount: parseFloat(amount) },
-    });
+  try {
+    const { data, response } = await parseJsonBody(req, expenseCreateSchema);
+    if (response) return response;
+
+    const expense = await prisma.expense.create({ data });
 
     return new Response(JSON.stringify(expense), { status: 201 });
   } catch (err) {
@@ -39,9 +63,13 @@ export async function POST(req) {
 
 // 📍 PUT → actualizar gasto
 export async function PUT(req) {
+  const { unauthorized } = await requireAdmin();
+  if (unauthorized) return unauthorized;
+
   try {
-    const body = await req.json();
-    const { id, ...updates } = body;
+    const { data, response } = await parseJsonBody(req, expenseUpdateSchema);
+    if (response) return response;
+    const { id, ...updates } = data;
 
     const expense = await prisma.expense.update({
       where: { id },
@@ -59,9 +87,13 @@ export async function PUT(req) {
 
 // 📍 DELETE → eliminar gasto
 export async function DELETE(req) {
+  const { unauthorized } = await requireAdmin();
+  if (unauthorized) return unauthorized;
+
   try {
-    const body = await req.json();
-    const { id } = body;
+    const { data, response } = await parseJsonBody(req, expenseDeleteSchema);
+    if (response) return response;
+    const { id } = data;
 
     await prisma.expense.delete({ where: { id } });
 

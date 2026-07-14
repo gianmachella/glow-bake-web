@@ -1,8 +1,37 @@
+import { z } from "zod";
 import prisma from "@/lib/prisma";
 import { convertQuantity } from "@/utils/convertQuantity";
+import { requireAdmin } from "@/lib/apiAuth";
+import { parseJsonBody } from "@/lib/validate";
+
+const recipeIngredientSchema = z.object({
+  ingredientId: z.string().min(1),
+  quantityUsed: z.coerce.number().nonnegative(),
+  unitType: z.string().min(1),
+});
+
+const recipeCreateSchema = z.object({
+  cookieId: z.string().min(1),
+  baseDoughId: z.string().min(1),
+  ingredients: z.array(recipeIngredientSchema),
+});
+
+const recipeUpdateSchema = z.object({
+  id: z.string().min(1),
+  cookieId: z.string().min(1),
+  baseDoughId: z.string().min(1),
+  ingredients: z.array(recipeIngredientSchema),
+});
+
+const idSchema = z.object({
+  id: z.string().min(1),
+});
 
 // GET: recetas de un cookieId (o todas si no se pasa cookieId)
 export async function GET(req) {
+  const { unauthorized } = await requireAdmin();
+  if (unauthorized) return unauthorized;
+
   try {
     const { searchParams } = new URL(req.url);
     const cookieId = searchParams.get("cookieId");
@@ -27,21 +56,28 @@ export async function GET(req) {
 
 // POST: crear nueva receta
 export async function POST(req) {
+  const { unauthorized } = await requireAdmin();
+  if (unauthorized) return unauthorized;
+
   try {
-    const body = await req.json();
+    const { data: body, response } = await parseJsonBody(req, recipeCreateSchema);
+    if (response) return response;
     const { cookieId, baseDoughId, ingredients } = body;
     // ingredients = [{ ingredientId, quantityUsed, unitType }]
+
+    const dbIngredients = await prisma.ingredient.findMany({
+      where: { id: { in: ingredients.map((ing) => ing.ingredientId) } },
+    });
+    const ingredientById = new Map(dbIngredients.map((i) => [i.id, i]));
 
     let totalCost = 0;
     const ingredientsData = [];
 
     for (const ing of ingredients) {
-      const dbIngredient = await prisma.ingredient.findUnique({
-        where: { id: ing.ingredientId },
-      });
+      const dbIngredient = ingredientById.get(ing.ingredientId);
       if (!dbIngredient) continue;
 
-      const qty = Number(ing.quantityUsed) || 0;
+      const qty = ing.quantityUsed;
       const qtyInInventoryUnit = convertQuantity(
         qty,
         ing.unitType,
@@ -88,24 +124,27 @@ export async function POST(req) {
 
 // PUT: actualizar receta existente
 export async function PUT(req) {
+  const { unauthorized } = await requireAdmin();
+  if (unauthorized) return unauthorized;
+
   try {
-    const body = await req.json();
+    const { data: body, response } = await parseJsonBody(req, recipeUpdateSchema);
+    if (response) return response;
     const { id, cookieId, baseDoughId, ingredients } = body;
 
-    if (!id) {
-      return new Response("Missing recipe ID", { status: 400 });
-    }
+    const dbIngredients = await prisma.ingredient.findMany({
+      where: { id: { in: ingredients.map((ing) => ing.ingredientId) } },
+    });
+    const ingredientById = new Map(dbIngredients.map((i) => [i.id, i]));
 
     let totalCost = 0;
     const ingredientsData = [];
 
     for (const ing of ingredients) {
-      const dbIngredient = await prisma.ingredient.findUnique({
-        where: { id: ing.ingredientId },
-      });
+      const dbIngredient = ingredientById.get(ing.ingredientId);
       if (!dbIngredient) continue;
 
-      const qty = Number(ing.quantityUsed) || 0;
+      const qty = ing.quantityUsed;
       const qtyInInventoryUnit = convertQuantity(
         qty,
         ing.unitType,
@@ -155,13 +194,13 @@ export async function PUT(req) {
 
 // DELETE: eliminar receta
 export async function DELETE(req) {
-  try {
-    const body = await req.json();
-    const { id } = body;
+  const { unauthorized } = await requireAdmin();
+  if (unauthorized) return unauthorized;
 
-    if (!id) {
-      return new Response("Missing recipe ID", { status: 400 });
-    }
+  try {
+    const { data, response } = await parseJsonBody(req, idSchema);
+    if (response) return response;
+    const { id } = data;
 
     await prisma.recipeIngredient.deleteMany({ where: { recipeId: id } });
     await prisma.recipe.delete({ where: { id } });

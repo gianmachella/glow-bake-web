@@ -8,25 +8,36 @@ import { motion } from "framer-motion";
 
 export default function SalesPage() {
   const [sales, setSales] = useState([]);
+  const [nextCursor, setNextCursor] = useState(null);
   const [loadingPage, setLoadingPage] = useState(true);
   const [loadingAction, setLoadingAction] = useState(false);
+  const [loadingMore, setLoadingMore] = useState(false);
 
-  async function fetchSales() {
+  async function fetchSales({ reset = false } = {}) {
     try {
-      const res = await fetch("/api/sales");
+      const cursor = reset ? null : nextCursor;
+      const url = cursor ? `/api/sales?cursor=${cursor}` : "/api/sales";
+      const res = await fetch(url);
       if (!res.ok) throw new Error("Error fetching sales");
-      const data = await res.json();
-      setSales(data);
+      const { data, nextCursor: newCursor } = await res.json();
+      setSales((prev) => (reset || !cursor ? data : [...prev, ...data]));
+      setNextCursor(newCursor);
     } catch (err) {
       Swal.fire("Error", "Could not fetch sales", "error");
     } finally {
       setLoadingPage(false);
+      setLoadingMore(false);
     }
   }
 
   useEffect(() => {
-    fetchSales();
+    fetchSales({ reset: true });
   }, []);
+
+  const handleLoadMore = () => {
+    setLoadingMore(true);
+    fetchSales();
+  };
 
   const handleDelete = async (id) => {
     const result = await Swal.fire({
@@ -46,7 +57,7 @@ export default function SalesPage() {
       const res = await fetch(`/api/sales?id=${id}`, { method: "DELETE" });
       if (res.ok) {
         Swal.fire("Deleted!", "Sale deleted successfully", "success");
-        fetchSales();
+        fetchSales({ reset: true });
       } else {
         Swal.fire("Error", "Could not delete sale", "error");
       }
@@ -142,6 +153,18 @@ export default function SalesPage() {
               </tbody>
             </table>
           </motion.div>
+        )}
+
+        {nextCursor && (
+          <div className="flex justify-center mt-8">
+            <button
+              onClick={handleLoadMore}
+              disabled={loadingMore}
+              className="px-6 py-2.5 bg-pink-500 hover:bg-pink-600 disabled:opacity-60 text-white rounded-xl shadow font-medium transition"
+            >
+              {loadingMore ? "Loading..." : "Load More"}
+            </button>
+          </div>
         )}
       </div>
     </section>

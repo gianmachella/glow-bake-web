@@ -1,31 +1,39 @@
 import { NextResponse } from "next/server";
 // IMPORTANTE: Si usas Resend, deja la siguiente línea. Si usas Nodemailer, cámbiala.
 import { Resend } from "resend";
+import { z } from "zod";
 import prisma from "@/lib/prisma";
+import { parseJsonBody } from "@/lib/validate";
 
 const resend = process.env.RESEND_API_KEY
   ? new Resend(process.env.RESEND_API_KEY)
   : null;
 
+const promoSchema = z.object({
+  email: z.string().trim().email(),
+});
+
 export async function POST(request) {
   try {
-    const { email } = await request.json();
-
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    if (!email || !emailRegex.test(email)) {
-      return NextResponse.json({ error: "Valid email is required" }, { status: 400 });
-    }
+    const { data, response } = await parseJsonBody(request, promoSchema);
+    if (response) return response;
+    const email = data.email.toLowerCase();
 
     // 1. Guardar en la Base de Datos
     const newPromo = await prisma.promotion.create({
-      data: { email: email.toLowerCase() },
+      data: { email },
     });
 
     // 2. Configurar el QR y el Email
     const qrUrl = `https://api.qrserver.com/v1/create-qr-code/?size=300x300&data=${newPromo.id}`;
 
     // 3. Enviar el Email (Copia el estilo de tus otras APIs aquí)
-    await resend.emails.send({
+    if (!resend) {
+      console.error("Resend client not initialized: RESEND_API_KEY is missing");
+      return NextResponse.json({ error: "Email service not configured" }, { status: 500 });
+    }
+
+    const { error: emailError } = await resend.emails.send({
       from: "GlowBake <hello@glowbake.com>", // Usa tu dominio verificado
       to: email,
       subject: "Your Sweet Treat for the Lucas Farmers Market! 🍪",
@@ -59,6 +67,11 @@ export async function POST(request) {
   </div>
 `,
     });
+
+    if (emailError) {
+      console.error("Resend API error:", { name: emailError.name, message: emailError.message, statusCode: emailError.statusCode });
+      return NextResponse.json({ error: "Failed to send coupon email" }, { status: 500 });
+    }
 
     return NextResponse.json(
       { message: "Coupon sent successfully!" },

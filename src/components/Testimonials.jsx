@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import Image from "next/image";
 
 const testimonials = [
   {
@@ -40,10 +41,12 @@ export default function Testimonials() {
       className="relative bg-pink-50 px-6 py-60 overflow-hidden"
     >
       {/* Imagen de fondo con opacidad */}
-      <img
+      <Image
         src="/images/testimonials-bg.png"
         alt="Testimonials Background"
-        className="absolute inset-0 w-full h-full object-cover opacity-10 pointer-events-none"
+        fill
+        sizes="100vw"
+        className="object-cover opacity-10 pointer-events-none"
       />
 
       {/* Contenido por encima */}

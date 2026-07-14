@@ -1,8 +1,23 @@
 import { NextResponse } from "next/server";
+import { z } from "zod";
 import prisma from "@/lib/prisma";
+import { requireAdmin } from "@/lib/apiAuth";
+import { parseJsonBody } from "@/lib/validate";
+
+const cookieIdSchema = z.object({
+  cookieId: z.string().min(1),
+});
+
+const doughAdjustSchema = z.object({
+  id: z.string().min(1),
+  amount: z.number().positive(),
+});
 
 // 📍 GET: listado de inventario de masas
 export async function GET() {
+  const { unauthorized } = await requireAdmin();
+  if (unauthorized) return unauthorized;
+
   try {
     const inventories = await prisma.doughInventory.findMany({
       include: { cookie: true },
@@ -24,8 +39,13 @@ export async function GET() {
 
 // 📍 POST: cargar una nueva masa (8 galletas congeladas)
 export async function POST(req) {
+  const { unauthorized } = await requireAdmin();
+  if (unauthorized) return unauthorized;
+
   try {
-    const { cookieId } = await req.json();
+    const { data, response } = await parseJsonBody(req, cookieIdSchema);
+    if (response) return response;
+    const { cookieId } = data;
 
     let dough = await prisma.doughInventory.findFirst({
       where: { cookieId },
@@ -70,13 +90,13 @@ export async function POST(req) {
 
 // 📍 PATCH → restar 1 cookie manualmente (devolver ingredientes ×1)
 export async function PATCH(req) {
+  const { unauthorized } = await requireAdmin();
+  if (unauthorized) return unauthorized;
+
   try {
-    const { cookieId } = await req.json();
-    if (!cookieId) {
-      return new Response(JSON.stringify({ error: "Missing cookieId" }), {
-        status: 400,
-      });
-    }
+    const { data, response } = await parseJsonBody(req, cookieIdSchema);
+    if (response) return response;
+    const { cookieId } = data;
 
     const dough = await prisma.doughInventory.findFirst({
       where: { cookieId },
@@ -129,11 +149,13 @@ export async function PATCH(req) {
 
 // 📍 DELETE → eliminar masa completa (8 galletas, devolver ingredientes ×8)
 export async function DELETE(req) {
+  const { unauthorized } = await requireAdmin();
+  if (unauthorized) return unauthorized;
+
   try {
-    const { cookieId } = await req.json();
-    if (!cookieId) {
-      return new Response("Missing cookieId", { status: 400 });
-    }
+    const { data, response } = await parseJsonBody(req, cookieIdSchema);
+    if (response) return response;
+    const { cookieId } = data;
 
     const dough = await prisma.doughInventory.findFirst({
       where: { cookieId },
@@ -169,11 +191,13 @@ export async function DELETE(req) {
 
 // 📍 PUT → restar cookies por ventas reales (NO devuelve ingredientes)
 export async function PUT(req) {
+  const { unauthorized } = await requireAdmin();
+  if (unauthorized) return unauthorized;
+
   try {
-    const { id, amount } = await req.json();
-    if (!id || !amount) {
-      return new Response("Missing id or amount", { status: 400 });
-    }
+    const { data, response } = await parseJsonBody(req, doughAdjustSchema);
+    if (response) return response;
+    const { id, amount } = data;
 
     const dough = await prisma.doughInventory.findUnique({ where: { id } });
     if (!dough) {
