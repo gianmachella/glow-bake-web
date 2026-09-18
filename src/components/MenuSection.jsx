@@ -12,10 +12,10 @@ export default function MenuSection() {
   useEffect(() => {
     async function fetchCookies() {
       try {
-        const res = await fetch("/api/cookies");
-        if (!res.ok) throw new Error("Error al cargar cookies");
+        const res = await fetch("/api/weekly-menu/active");
+        if (!res.ok) throw new Error("Error al cargar el menú semanal");
         const data = await res.json();
-        setCookies(data.filter((c) => c.visible));
+        setCookies(data.cookies);
       } catch (err) {
         console.error("❌ Error cargando cookies:", err);
       }

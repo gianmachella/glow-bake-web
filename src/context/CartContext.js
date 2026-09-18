@@ -57,8 +57,47 @@ export function CartProvider({ children }) {
     );
   };
 
+  // Sets an item's quantity directly (stepper cap, typed input, stock clamp).
+  // Quantities <= 0 remove the item, same as decrementing to zero.
+  const setQuantity = (id, quantity) => {
+    setCartItems((prevItems) =>
+      prevItems
+        .map((item) => (item.id === id ? { ...item, quantity } : item))
+        .filter((item) => item.quantity > 0)
+    );
+  };
+
   const deleteFromCart = (id) => {
     setCartItems((prevItems) => prevItems.filter((item) => item.id !== id));
+  };
+
+  // Reconciles the cart against a live { [cookieId]: remainingStock } map —
+  // called by the cart page on load/focus/before checkout so a quantity added
+  // earlier (or a batch that sold out/shrank since) never survives past the
+  // real stock. Items missing from the map are no longer on the active weekly
+  // menu at all and are dropped; items over their live remaining are clamped.
+  // Returns the list of adjustments made, so the caller can surface them.
+  const reconcileStock = (stockById) => {
+    const changes = [];
+    const next = cartItems
+      .map((item) => {
+        const remaining = stockById[item.id];
+        if (remaining === undefined || remaining <= 0) {
+          changes.push({ id: item.id, name: item.name, remaining: 0, removed: true });
+          return null;
+        }
+        if (item.quantity > remaining) {
+          changes.push({ id: item.id, name: item.name, remaining, removed: false });
+          return { ...item, quantity: remaining };
+        }
+        return item;
+      })
+      .filter(Boolean);
+
+    if (changes.length > 0) {
+      setCartItems(next);
+    }
+    return changes;
   };
 
   const cartCount = cartItems.reduce((sum, item) => sum + item.quantity, 0);
@@ -70,6 +109,8 @@ export function CartProvider({ children }) {
         addToCart,
         increment,
         decrement,
+        setQuantity,
+        reconcileStock,
         deleteFromCart,
         cartCount,
         clearCart,
