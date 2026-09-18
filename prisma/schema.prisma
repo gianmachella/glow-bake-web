@@ -341,3 +341,25 @@ model WebPromotionClaim {
   @@unique([webPromotionId, email])
   @@index([webPromotionId])
 }
+
+// A single photo or video in the public storefront's media gallery. `order`
+// controls display position (lower first); `published` lets the admin hide
+// an item without deleting it. The storefront only ever reads the /active
+// endpoint, which filters to published and orders by `order`.
+model GalleryMedia {
+  id        String         @id @default(cuid())
+  url       String
+  type      GalleryMediaType
+  caption   String?
+  published Boolean        @default(true)
+  order     Int            @default(0)
+  createdAt DateTime       @default(now())
+  updatedAt DateTime       @updatedAt
+
+  @@index([order])
+}
+
+enum GalleryMediaType {
+  IMAGE
+  VIDEO
+}
