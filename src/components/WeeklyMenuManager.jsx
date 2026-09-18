@@ -112,6 +112,44 @@ export default function WeeklyMenuManager() {
     }
   };
 
+  // Wipes sold + batch limit back to 0 for this cookie/week — for undoing a
+  // bad setup or clearing stale numbers, not normal restocking. Confirms
+  // first since it discards this week's sales/stock history for the item.
+  const handleReset = (cookieId, name) => {
+    Swal.fire({
+      icon: "warning",
+      title: `Reset ${name}?`,
+      text: "This clears sold units and available stock back to 0 for this week. This cannot be undone.",
+      showCancelButton: true,
+      confirmButtonText: "Reset",
+      confirmButtonColor: "#dc2626",
+      cancelButtonText: "Cancel",
+    }).then(async (result) => {
+      if (!result.isConfirmed) return;
+
+      try {
+        const res = await fetch("/api/weekly-menu/reset", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ cookieId, weekStart }),
+        });
+        const data = await res.json().catch(() => ({}));
+        if (!res.ok) throw new Error(data.error || "Failed to reset inventory");
+
+        setCookies((prev) =>
+          prev.map((c) =>
+            c.cookieId === cookieId
+              ? { ...c, batchLimit: data.batchLimit, sold: data.sold }
+              : c
+          )
+        );
+        Swal.fire("Reset", `${name}'s weekly inventory has been reset.`, "success");
+      } catch (err) {
+        Swal.fire("Error", err.message, "error");
+      }
+    });
+  };
+
   const handleSave = async () => {
     const included = cookies.filter((c) => c.included);
     const invalid = included.find((c) => !Number.isInteger(c.batchLimit) || c.batchLimit <= 0);
@@ -179,6 +217,7 @@ export default function WeeklyMenuManager() {
                   <th className="text-left py-3 px-4">Batch limit</th>
                   <th className="text-left py-3 px-4">Sold / Remaining</th>
                   <th className="text-left py-3 px-4">Manual adjust</th>
+                  <th className="text-left py-3 px-4">Reset</th>
                 </tr>
               </thead>
               <tbody>
@@ -271,6 +310,16 @@ export default function WeeklyMenuManager() {
                             {adjustingId === c.cookieId ? "..." : "− Decrease"}
                           </button>
                         </div>
+                      </td>
+                      <td className="py-3 px-4">
+                        <button
+                          onClick={() => handleReset(c.cookieId, c.name)}
+                          disabled={c.batchLimit <= 0 && c.sold <= 0}
+                          title="Wipe sold units and available stock back to 0 for this week"
+                          className="text-xs font-semibold bg-gray-100 hover:bg-gray-200 text-gray-700 px-3 py-1.5 rounded-lg disabled:opacity-50 disabled:cursor-not-allowed"
+                        >
+                          Reset
+                        </button>
                       </td>
                     </tr>
                   );
