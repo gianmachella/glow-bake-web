@@ -4,25 +4,58 @@ import { ChevronLeft, ChevronRight, Play, X } from "lucide-react";
 import { useEffect, useState } from "react";
 
 export default function MediaGallery() {
-  const [items, setItems] = useState(null); // null = loading, [] = nothing to show
+  const [items, setItems] = useState(null); // null = still loading
   const [lightboxIndex, setLightboxIndex] = useState(null);
 
   useEffect(() => {
+    let cancelled = false;
+
     async function fetchGallery() {
       try {
         const res = await fetch("/api/gallery/active");
-        if (!res.ok) throw new Error("Failed to load gallery");
-        setItems(await res.json());
+        if (!res.ok) {
+          throw new Error(`Gallery request failed with status ${res.status}`);
+        }
+        const data = await res.json();
+        if (cancelled) return;
+
+        // Guard against a malformed/non-array response (e.g. an error body
+        // that still came back with a 200, or an API contract change) — treat
+        // it the same as "nothing to show" instead of crashing on
+        // items.map() below, but log loudly so it's diagnosable and never
+        // gets mistaken for the legitimate "zero published items" case.
+        if (!Array.isArray(data)) {
+          console.error(
+            "❌ /api/gallery/active did not return an array:",
+            data
+          );
+          setItems([]);
+          return;
+        }
+
+        setItems(data);
       } catch (err) {
+        if (cancelled) return;
         console.error("❌ Error loading gallery:", err);
         setItems([]);
       }
     }
+
     fetchGallery();
+    return () => {
+      cancelled = true;
+    };
   }, []);
 
+  // Still waiting on the first fetch — render nothing yet rather than
+  // flashing "empty" before we actually know.
+  if (items === null) return null;
+
   // Crucial rule: no published media → the section doesn't exist on the page.
-  if (!items || items.length === 0) return null;
+  // A fetch failure lands here too (logged above via console.error) rather
+  // than showing a broken section to customers — check devtools/network tab
+  // if the gallery unexpectedly stays hidden despite published items existing.
+  if (items.length === 0) return null;
 
   const openAt = (index) => setLightboxIndex(index);
   const close = () => setLightboxIndex(null);

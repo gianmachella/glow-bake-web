@@ -29,6 +29,11 @@ const updateSchema = z.object({
   caption: z.string().optional(),
 });
 
+// requireAdmin() already reads session cookies, which implicitly opts this
+// route out of static caching — declared explicitly anyway so it's obvious
+// and doesn't depend on that implicit behavior surviving a refactor.
+export const dynamic = "force-dynamic";
+
 // GET /api/gallery — admin: every media item, in display order.
 export async function GET() {
   const { unauthorized } = await requireAdmin();
