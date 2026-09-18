@@ -7,6 +7,7 @@ import {
   ChevronRight,
   CircleDollarSign,
   Cookie,
+  Images,
   LayoutDashboard,
   LogOut,
   Megaphone,
@@ -74,6 +75,11 @@ export default function DashboardLayout({ children }) {
       href: "/dashboard/announcements",
       label: "Announcements",
       icon: <Megaphone size={20} />,
+    },
+    {
+      href: "/dashboard/gallery",
+      label: "Gallery",
+      icon: <Images size={20} />,
     },
   ];
 
