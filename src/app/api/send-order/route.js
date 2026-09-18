@@ -6,6 +6,18 @@ import { parseJsonBody } from "@/lib/validate";
 import { apiError } from "@/lib/apiResponse";
 import { computeLineItems } from "@/lib/discounts";
 import { startOfDay } from "@/lib/dateWindow";
+import { getWeekStart } from "@/lib/weekWindow";
+
+class StockError extends Error {
+  constructor(cookieName, remaining) {
+    super(
+      remaining > 0
+        ? `Only ${remaining} left of ${cookieName} this week.`
+        : `${cookieName} is not available this week.`
+    );
+    this.name = "StockError";
+  }
+}
 
 const orderItemSchema = z.object({
   id: z.string().min(1),
@@ -104,8 +116,7 @@ export async function POST(req) {
 
     const total = subtotal;
 
-    // 1️⃣ Crear o conectar cliente, crear venta con items.
-    const sale = await prisma.$transaction(async (tx) => {
+    async function createSale(tx) {
       const customer = await tx.customer.upsert({
         where: { email },
         update: { name, lastName, phone, address },
@@ -134,7 +145,48 @@ export async function POST(req) {
       });
 
       return newSale;
-    });
+    }
+
+    // 🍪 Decrement weekly batch stock and create the sale atomically. Row-locks
+    // (FOR UPDATE) each cookie's current-week WeeklyMenuItem so concurrent
+    // checkouts can't both succeed past the batch limit; any item that isn't
+    // active in this week's menu, or doesn't have enough remaining, aborts the
+    // whole order with a StockError instead of partially selling it.
+    const weekStart = getWeekStart();
+
+    let sale;
+    try {
+      sale = await prisma.$transaction(async (tx) => {
+        for (const item of computedItems) {
+          const [menuItem] = await tx.$queryRaw`
+            SELECT id, batchLimit, sold, active FROM WeeklyMenuItem
+            WHERE cookieId = ${item.id} AND weekStart = ${weekStart}
+            FOR UPDATE
+          `;
+
+          if (!menuItem || !menuItem.active) {
+            throw new StockError(item.name, 0);
+          }
+
+          const remaining = menuItem.batchLimit - menuItem.sold;
+          if (remaining < item.quantity) {
+            throw new StockError(item.name, remaining);
+          }
+
+          await tx.weeklyMenuItem.update({
+            where: { id: menuItem.id },
+            data: { sold: { increment: item.quantity } },
+          });
+        }
+
+        return createSale(tx);
+      });
+    } catch (err) {
+      if (err instanceof StockError) {
+        return apiError(err.message, 409);
+      }
+      throw err;
+    }
 
     // 📧 Emails
     const resend = new Resend(process.env.RESEND_API_KEY);

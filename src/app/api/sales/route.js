@@ -4,6 +4,8 @@ import { z } from "zod";
 import prisma from "@/lib/prisma";
 import { requireAdmin } from "@/lib/apiAuth";
 import { parseJsonBody } from "@/lib/validate";
+import { getWeekStart } from "@/lib/weekWindow";
+import { adjustWeeklySold } from "@/lib/weeklyStock";
 
 const saleItemSchema = z.object({
   cookieId: z.string().min(1),
@@ -77,21 +79,38 @@ export async function POST(req) {
       },
     });
 
-    const sale = await prisma.sale.create({
-      data: {
-        total,
-        deliveryDay,
-        deliveryMethod: "Pickup",
-        customerId: customer.id,
-        items: {
-          create: items.map((item) => ({
-            cookieId: item.cookieId,
-            quantity: item.quantity,
-            price: item.price,
-          })),
+    const weekStart = getWeekStart();
+
+    const sale = await prisma.$transaction(async (tx) => {
+      const newSale = await tx.sale.create({
+        data: {
+          total,
+          deliveryDay,
+          deliveryMethod: "Pickup",
+          customerId: customer.id,
+          items: {
+            create: items.map((item) => ({
+              cookieId: item.cookieId,
+              quantity: item.quantity,
+              price: item.price,
+            })),
+          },
         },
-      },
-      include: { items: { include: { cookie: true } } },
+        include: { items: { include: { cookie: true } } },
+      });
+
+      // Best-effort sync: if this cookie is also on the current week's online
+      // menu, keep its remaining-stock count accurate for the storefront.
+      // Unlike checkout, a POS/event sale is never blocked by this — walk-up
+      // and catering sales are allowed to exceed the online batch, so this
+      // just records the units without rejecting the sale (adjustWeeklySold
+      // clamps at the batch limit and no-ops if the cookie isn't on the
+      // weekly menu at all).
+      for (const item of items) {
+        await adjustWeeklySold(tx, item.cookieId, weekStart, item.quantity);
+      }
+
+      return newSale;
     });
 
     // --- LÓGICA DE EMAIL CORREGIDA ---
@@ -177,7 +196,11 @@ export async function POST(req) {
   }
 }
 
-// 3. ELIMINAR VENTA (DELETE)
+// 3. ELIMINAR VENTA (DELETE) — restores each item's quantity back into that
+// week's WeeklyMenuItem stock before removing the sale, so canceling/deleting
+// an order (online or POS) always frees up the batch it was counted against.
+// The week is derived from the sale's own createdAt, not "now", since a sale
+// can be deleted well after its week has passed.
 export async function DELETE(req) {
   const { unauthorized } = await requireAdmin();
   if (unauthorized) return unauthorized;
@@ -193,11 +216,27 @@ export async function DELETE(req) {
       );
     }
 
-    await prisma.saleItem.deleteMany({ where: { saleId: id } });
-    const deletedSale = await prisma.sale.delete({ where: { id: id } });
+    const sale = await prisma.sale.findUnique({
+      where: { id },
+      include: { items: true },
+    });
+    if (!sale) {
+      return NextResponse.json({ error: "Sale not found" }, { status: 404 });
+    }
+
+    const weekStart = getWeekStart(sale.createdAt);
+
+    const deletedSale = await prisma.$transaction(async (tx) => {
+      for (const item of sale.items) {
+        await adjustWeeklySold(tx, item.cookieId, weekStart, -item.quantity);
+      }
+      await tx.saleItem.deleteMany({ where: { saleId: id } });
+      return tx.sale.delete({ where: { id } });
+    });
 
     return NextResponse.json({ message: "Sale deleted", deletedSale });
   } catch (error) {
+    console.error("❌ Error DELETE /api/sales:", error);
     return NextResponse.json({ error: error.message }, { status: 500 });
   }
 }

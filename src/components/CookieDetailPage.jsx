@@ -10,29 +10,44 @@ import { useCart } from "@/context/CartContext";
 export default function CookieDetailPage({ params }) {
   const { addToCart } = useCart();
   const [cookie, setCookie] = useState(null);
+  const [weeklyStatus, setWeeklyStatus] = useState(null); // null while loading, undefined if not on this week's menu
   const [suggested, setSuggested] = useState([]);
   const [quantity, setQuantity] = useState(1);
   const [current, setCurrent] = useState(0);
   const [showStore, setShowStore] = useState(false);
 
-  // Cargar cookie por ID y sugerencias
+  // Cargar la cookie por ID (detalle completo) y el menú semanal activo, que es
+  // la única fuente de verdad de qué está disponible/agotado esta semana.
+  // Las sugerencias SIEMPRE se filtran contra ese menú activo, nunca contra el
+  // catálogo completo, para que no se pueda sugerir/agregar algo fuera de semana.
   useEffect(() => {
     async function fetchData() {
       try {
-        const res = await fetch("/api/cookies");
-        if (!res.ok) throw new Error("Error fetching cookies");
-        const data = await res.json();
+        const [cookieRes, activeRes] = await Promise.all([
+          fetch(`/api/cookies/${encodeURIComponent(params.id)}`),
+          fetch("/api/weekly-menu/active"),
+        ]);
 
-        // Buscar cookie actual
-        const currentCookie = data.find((c) => c.id === params.id);
-        setCookie(currentCookie);
+        if (cookieRes.ok) {
+          setCookie(await cookieRes.json());
+        } else {
+          setCookie(undefined);
+        }
 
-        // Seleccionar sugerencias aleatorias
-        const shuffled = data
-          .filter((c) => c.id !== params.id)
-          .sort(() => 0.5 - Math.random())
-          .slice(0, 4);
-        setSuggested(shuffled);
+        if (activeRes.ok) {
+          const { cookies: activeCookies } = await activeRes.json();
+
+          const currentStatus = activeCookies.find((c) => c.id === params.id);
+          setWeeklyStatus(currentStatus || false);
+
+          const shuffled = activeCookies
+            .filter((c) => c.id !== params.id && !c.soldOut)
+            .sort(() => 0.5 - Math.random())
+            .slice(0, 4);
+          setSuggested(shuffled);
+        } else {
+          setWeeklyStatus(false);
+        }
       } catch (err) {
         console.error("❌ Error cargando cookie:", err);
       }
@@ -40,9 +55,14 @@ export default function CookieDetailPage({ params }) {
     fetchData();
   }, [params.id]);
 
-  if (!cookie) return <p className="p-6 text-gray-500">Cookie not found 🍪</p>;
+  if (cookie === undefined)
+    return <p className="p-6 text-gray-500">Cookie not found 🍪</p>;
+  if (!cookie) return <p className="p-6 text-gray-500">Loading 🍪</p>;
+
+  const soldOut = !weeklyStatus || weeklyStatus.soldOut;
 
   const handleAdd = () => {
+    if (soldOut) return;
     addToCart({ ...cookie, quantity });
   };
 
@@ -95,15 +115,27 @@ export default function CookieDetailPage({ params }) {
 
         {/* Price & Cart */}
         <div className="flex flex-col md:flex-row md:items-center md:gap-6 mb-6 gap-4">
-          <p className="text-2xl font-bold text-gray-900">
-            (${cookie.price.toFixed(2)} USD)
-          </p>
+          <div>
+            <p className="text-2xl font-bold text-gray-900">
+              (${cookie.price.toFixed(2)} USD)
+            </p>
+            {weeklyStatus && !soldOut && (
+              <p
+                className={`text-sm font-semibold mt-1 ${
+                  weeklyStatus.remaining <= 3 ? "text-red-600" : "text-green-600"
+                }`}
+              >
+                {weeklyStatus.remaining} left this week
+              </p>
+            )}
+          </div>
 
           {/* Contador */}
           <div className="flex items-center gap-3">
             <button
               onClick={() => setQuantity((q) => Math.max(1, q - 1))}
-              className="w-10 h-10 flex items-center justify-center rounded-full bg-pink-500 text-white hover:bg-pink-600 shadow"
+              disabled={soldOut}
+              className="w-10 h-10 flex items-center justify-center rounded-full bg-pink-500 text-white hover:bg-pink-600 shadow disabled:bg-gray-300 disabled:cursor-not-allowed"
             >
               -
             </button>
@@ -111,8 +143,13 @@ export default function CookieDetailPage({ params }) {
               {quantity}
             </span>
             <button
-              onClick={() => setQuantity((q) => q + 1)}
-              className="w-10 h-10 flex items-center justify-center rounded-full bg-pink-500 text-white hover:bg-pink-600 shadow"
+              onClick={() =>
+                setQuantity((q) =>
+                  weeklyStatus ? Math.min(weeklyStatus.remaining, q + 1) : q + 1
+                )
+              }
+              disabled={soldOut || (weeklyStatus && quantity >= weeklyStatus.remaining)}
+              className="w-10 h-10 flex items-center justify-center rounded-full bg-pink-500 text-white hover:bg-pink-600 shadow disabled:bg-gray-300 disabled:cursor-not-allowed"
             >
               +
             </button>
@@ -120,9 +157,16 @@ export default function CookieDetailPage({ params }) {
 
           <button
             onClick={handleAdd}
-            className="bg-pink-500 hover:bg-pink-600 text-white px-6 py-3 rounded-full font-semibold text-sm md:text-base w-full md:w-auto"
+            disabled={soldOut}
+            className="bg-pink-500 hover:bg-pink-600 disabled:bg-gray-300 disabled:cursor-not-allowed text-white px-6 py-3 rounded-full font-semibold text-sm md:text-base w-full md:w-auto"
           >
-            Add to Cart
+            {weeklyStatus === null
+              ? "Loading..."
+              : soldOut
+                ? weeklyStatus
+                  ? "Sold Out"
+                  : "Not available this week"
+                : "Add to Cart"}
           </button>
         </div>
 

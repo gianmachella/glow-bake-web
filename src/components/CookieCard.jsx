@@ -11,12 +11,15 @@ export default function CookieCard({ cookie, index }) {
   const [ref, inView] = useInView({ triggerOnce: true });
   const { addToCart } = useCart();
   const [count, setCount] = useState(1);
+  const soldOut = !!cookie.soldOut;
+  const hasStockInfo = typeof cookie.remaining === "number";
 
   useEffect(() => {
     if (inView) controls.start({ opacity: 1, y: 0 });
   }, [inView, controls]);
 
   const handleAdd = () => {
+    if (soldOut) return;
     addToCart({ ...cookie, quantity: count });
     setCount(1); // opcional reset
   };
@@ -29,7 +32,7 @@ export default function CookieCard({ cookie, index }) {
       transition={{ duration: 1.2, delay: index * 0.4 }}
       className="relative cursor-pointer bg-white p-4 rounded-2xl shadow-md hover:shadow-lg transition-transform hover:scale-105 flex flex-col h-full"
     >
-      {cookie.isNew && ( // 👈 ahora usamos isNew
+      {cookie.isNew && !soldOut && ( // 👈 ahora usamos isNew
         <Image
           src="/images/cookies/new.png"
           alt="New"
@@ -37,6 +40,14 @@ export default function CookieCard({ cookie, index }) {
           height={80}
           className="absolute -top-6 -left-6 w-20 h-20 z-10 -rotate-12"
         />
+      )}
+
+      {soldOut && (
+        <div className="absolute inset-0 z-20 flex items-center justify-center bg-white/70 rounded-2xl">
+          <span className="bg-gray-900 text-white text-sm font-bold uppercase tracking-wide px-4 py-2 rounded-full -rotate-6 shadow-lg">
+            Sold Out
+          </span>
+        </div>
       )}
 
       {/* Imagen centrada */}
@@ -70,6 +81,15 @@ export default function CookieCard({ cookie, index }) {
         <p className="text-gray-800 font-semibold text-base mt-2">
           ${cookie.price.toFixed(2)} USD
         </p>
+        {hasStockInfo && !soldOut && (
+          <p
+            className={`text-xs font-semibold mt-1 ${
+              cookie.remaining <= 3 ? "text-red-600" : "text-green-600"
+            }`}
+          >
+            {cookie.remaining} left this week
+          </p>
+        )}
       </div>
 
       {/* Contador + botón */}
@@ -87,8 +107,13 @@ export default function CookieCard({ cookie, index }) {
             {count}
           </span>
           <button
-            onClick={() => setCount((prev) => prev + 1)}
-            className="w-8 h-8 rounded-full bg-gray-300 hover:bg-pink-500 hover:text-white text-gray-800"
+            onClick={() =>
+              setCount((prev) =>
+                hasStockInfo ? Math.min(cookie.remaining, prev + 1) : prev + 1
+              )
+            }
+            disabled={hasStockInfo && count >= cookie.remaining}
+            className="w-8 h-8 rounded-full bg-gray-300 hover:bg-pink-500 hover:text-white text-gray-800 disabled:opacity-50 disabled:hover:bg-gray-300 disabled:hover:text-gray-800"
           >
             +
           </button>
@@ -97,9 +122,10 @@ export default function CookieCard({ cookie, index }) {
         {/* botón */}
         <button
           onClick={handleAdd}
-          className="bg-pink-500 hover:bg-pink-600 text-white px-4 py-2 rounded-full font-medium text-sm w-full sm:w-auto"
+          disabled={soldOut}
+          className="bg-pink-500 hover:bg-pink-600 disabled:bg-gray-300 disabled:cursor-not-allowed text-white px-4 py-2 rounded-full font-medium text-sm w-full sm:w-auto"
         >
-          Add to Cart
+          {soldOut ? "Sold Out" : "Add to Cart"}
         </button>
       </div>
     </motion.div>

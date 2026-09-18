@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 
 import Link from "next/link";
 import Swal from "sweetalert2";
@@ -9,8 +9,19 @@ import { useRouter } from "next/navigation";
 import { computeLineItems } from "@/lib/discounts";
 
 export default function CartPage() {
-  const { cartItems, clearCart, increment, decrement, deleteFromCart } =
-    useCart();
+  const {
+    cartItems,
+    clearCart,
+    decrement,
+    setQuantity,
+    reconcileStock,
+    deleteFromCart,
+  } = useCart();
+
+  // Live { [cookieId]: remainingStock } from this week's active menu — null
+  // until the first fetch resolves, so stepper caps/disabling don't flash on
+  // before we actually know the real limits.
+  const [stockById, setStockById] = useState(null);
 
   const [form, setForm] = useState({
     name: "",
@@ -232,6 +243,28 @@ export default function CartPage() {
     setLoading(true);
 
     try {
+      // One last live-stock check right before submitting — the server
+      // enforces this too (send-order returns 409 on insufficient stock),
+      // but checking here first avoids a customer filling out the whole
+      // form only to have it rejected after clicking Place Order.
+      const stockRes = await fetch("/api/weekly-menu/active");
+      if (stockRes.ok) {
+        const { cookies } = await stockRes.json();
+        const map = Object.fromEntries(cookies.map((c) => [c.id, c.remaining]));
+        setStockById(map);
+        const changes = reconcileStock(map);
+        if (changes.length > 0) {
+          notifyStockChanges(changes);
+          Swal.fire(
+            "Cart updated",
+            "Some items changed since you added them. Please review your cart and try again.",
+            "info"
+          );
+          setLoading(false);
+          return;
+        }
+      }
+
       const delivery = getDeliveryMessage();
       const deliveryCost = delivery && !delivery.free ? delivery.cost : 0;
       const grandTotal = total + deliveryCost;
@@ -302,6 +335,80 @@ export default function CartPage() {
     fetchActiveDiscounts();
   }, []);
 
+  // reconcileStock closes over the CURRENT cartItems, so it's a new function
+  // every time the cart changes. The mount/focus/interval effect below only
+  // registers once (empty deps) — keeping it in a ref (instead of the effect's
+  // dep array) means the interval/focus listener don't get torn down and
+  // rebuilt on every cart edit, while still always reconciling against the
+  // latest cart contents rather than whatever it was at mount.
+  const reconcileStockRef = useRef(reconcileStock);
+  useEffect(() => {
+    reconcileStockRef.current = reconcileStock;
+  }, [reconcileStock]);
+
+  const notifyStockChanges = (changes) => {
+    if (!changes.length) return;
+    const summary = changes
+      .map((c) =>
+        c.removed
+          ? `${c.name} is no longer available and was removed from your cart.`
+          : `Only ${c.remaining} left of ${c.name} — quantity updated.`
+      )
+      .join(" ");
+    Swal.fire({
+      toast: true,
+      position: "top-end",
+      icon: "warning",
+      title: "Your cart was updated",
+      text: summary,
+      showConfirmButton: false,
+      timer: 6000,
+      timerProgressBar: true,
+    });
+  };
+
+  // Live weekly-menu stock, refreshed on load, on tab focus, and every 30s
+  // while the cart is open — so a quantity added earlier (or a batch that
+  // sold out/shrank while the customer was browsing) never survives to
+  // checkout untouched.
+  useEffect(() => {
+    let cancelled = false;
+
+    const checkStock = async () => {
+      try {
+        const res = await fetch("/api/weekly-menu/active");
+        if (!res.ok) throw new Error("Failed to load stock");
+        const { cookies } = await res.json();
+        if (cancelled) return;
+
+        const map = Object.fromEntries(cookies.map((c) => [c.id, c.remaining]));
+        setStockById(map);
+
+        const changes = reconcileStockRef.current(map);
+        notifyStockChanges(changes);
+      } catch (err) {
+        console.error("Error checking live stock:", err);
+      }
+    };
+
+    checkStock();
+    const interval = setInterval(checkStock, 30000);
+    window.addEventListener("focus", checkStock);
+
+    return () => {
+      cancelled = true;
+      clearInterval(interval);
+      window.removeEventListener("focus", checkStock);
+    };
+  }, []);
+
+  // Live remaining stock for one cart item; Infinity while stock hasn't
+  // loaded yet so controls don't flash disabled before we know the real cap.
+  const maxStockFor = (id) => {
+    if (!stockById) return Infinity;
+    return stockById[id] ?? 0;
+  };
+
   return (
     <section className="w-full min-h-screen bg-pink-50 px-6 py-12 pt-24">
       <div className="max-w-7xl mx-auto">
@@ -358,23 +465,48 @@ export default function CartPage() {
                     </div>
                   </div>
                   <div className="flex flex-col items-center md:flex-row md:gap-4 w-full md:w-auto">
-                    <div className="flex items-center gap-2 mb-2 md:mb-0">
-                      <button
-                        onClick={() => decrement(item.id)}
-                        disabled={item.quantity <= 1}
-                        className="w-8 h-8 rounded-full bg-gray-300 hover:bg-pink-500 hover:text-white text-gray-900"
-                      >
-                        -
-                      </button>
-                      <span className="w-6 text-center font-medium text-gray-900">
-                        {item.quantity}
-                      </span>
-                      <button
-                        onClick={() => increment(item.id)}
-                        className="w-8 h-8 rounded-full bg-gray-300 hover:bg-pink-500 hover:text-white text-gray-900"
-                      >
-                        +
-                      </button>
+                    <div className="flex flex-col items-center gap-1 mb-2 md:mb-0">
+                      <div className="flex items-center gap-2">
+                        <button
+                          onClick={() => decrement(item.id)}
+                          disabled={item.quantity <= 1}
+                          className="w-8 h-8 rounded-full bg-gray-300 hover:bg-pink-500 hover:text-white text-gray-900 disabled:opacity-50"
+                        >
+                          -
+                        </button>
+                        <input
+                          type="number"
+                          min="1"
+                          max={maxStockFor(item.id)}
+                          value={item.quantity}
+                          onChange={(e) => {
+                            const raw = parseInt(e.target.value, 10);
+                            const max = maxStockFor(item.id);
+                            const clamped = Number.isNaN(raw)
+                              ? 1
+                              : Math.min(Math.max(raw, 1), max);
+                            setQuantity(item.id, clamped);
+                          }}
+                          className="w-14 text-center font-medium text-gray-900 border border-gray-300 rounded px-1 py-0.5"
+                        />
+                        <button
+                          onClick={() =>
+                            setQuantity(
+                              item.id,
+                              Math.min(item.quantity + 1, maxStockFor(item.id))
+                            )
+                          }
+                          disabled={item.quantity >= maxStockFor(item.id)}
+                          className="w-8 h-8 rounded-full bg-gray-300 hover:bg-pink-500 hover:text-white text-gray-900 disabled:opacity-50 disabled:hover:bg-gray-300 disabled:hover:text-gray-900"
+                        >
+                          +
+                        </button>
+                      </div>
+                      {stockById && item.quantity >= maxStockFor(item.id) && (
+                        <span className="text-[11px] text-red-600 font-medium">
+                          Max available: {maxStockFor(item.id)}
+                        </span>
+                      )}
                     </div>
                     <div className="text-center md:text-right font-bold text-pink-600 w-full md:w-20">
                       ${item.lineTotal.toFixed(2)}

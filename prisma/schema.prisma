@@ -27,6 +27,26 @@ model Cookie {
   saleItems         SaleItem[]
   autoDiscounts     AutoDiscount[]
   webPromotions     WebPromotion[]
+  weeklyMenuItems   WeeklyMenuItem[]
+}
+
+// A cookie flavor's availability for one calendar week (Monday 00:00 UTC start).
+// The admin assigns a batchLimit per cookie per week; `sold` is incremented
+// atomically at checkout as orders are placed, and the storefront/suggested-cookies
+// queries only ever surface rows that are `active` with `sold < batchLimit`.
+model WeeklyMenuItem {
+  id         String   @id @default(cuid())
+  cookieId   String
+  weekStart  DateTime
+  batchLimit Int
+  sold       Int      @default(0)
+  active     Boolean  @default(true)
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+  cookie     Cookie   @relation(fields: [cookieId], references: [id], onDelete: Cascade)
+
+  @@unique([cookieId, weekStart])
+  @@index([weekStart])
 }
 
 model Ingredient {
