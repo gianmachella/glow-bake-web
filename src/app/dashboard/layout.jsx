@@ -2,6 +2,7 @@
 
 import { AnimatePresence, motion } from "framer-motion";
 import {
+  CalendarClock,
   CalendarDays,
   ChevronLeft,
   ChevronRight,
@@ -39,6 +40,11 @@ export default function DashboardLayout({ children }) {
       href: "/dashboard/cookies",
       label: "Cookies",
       icon: <Cookie size={20} />,
+    },
+    {
+      href: "/dashboard/weekly-menu",
+      label: "Weekly Menu",
+      icon: <CalendarClock size={20} />,
     },
     {
       href: "/dashboard/delivery-settings",
