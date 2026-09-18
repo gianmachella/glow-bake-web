@@ -30,6 +30,8 @@ export default function WeeklyMenuManager() {
   const [cookies, setCookies] = useState([]);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [adjustAmounts, setAdjustAmounts] = useState({});
+  const [adjustingId, setAdjustingId] = useState(null);
 
   const weekStart = toDateInputValue(mondayOf(weekInput));
 
@@ -66,6 +68,48 @@ export default function WeeklyMenuManager() {
         c.cookieId === cookieId ? { ...c, batchLimit } : c
       )
     );
+  };
+
+  // Manual stock decrement — records `amount` units as sold immediately
+  // against this cookie's current batch (in-person sale, waste, any offline
+  // adjustment), independent of the batch-limit/toggle "Save" button below.
+  // Hits the server right away so sold/remaining reflect it in real time.
+  const handleManualAdjust = async (cookieId) => {
+    const amount = Number(adjustAmounts[cookieId]) || 1;
+    if (amount <= 0) return;
+
+    setAdjustingId(cookieId);
+    try {
+      const res = await fetch("/api/weekly-menu/adjust", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ cookieId, weekStart, amount }),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(data.error || "Failed to record adjustment");
+
+      setCookies((prev) =>
+        prev.map((c) =>
+          c.cookieId === cookieId
+            ? { ...c, batchLimit: data.batchLimit, sold: data.sold }
+            : c
+        )
+      );
+      setAdjustAmounts((prev) => ({ ...prev, [cookieId]: "" }));
+
+      Swal.fire({
+        toast: true,
+        position: "top-end",
+        icon: "success",
+        title: `Recorded -${amount} stock`,
+        showConfirmButton: false,
+        timer: 2500,
+      });
+    } catch (err) {
+      Swal.fire("Error", err.message, "error");
+    } finally {
+      setAdjustingId(null);
+    }
   };
 
   const handleSave = async () => {
@@ -134,6 +178,7 @@ export default function WeeklyMenuManager() {
                   <th className="text-left py-3 px-4">Cookie</th>
                   <th className="text-left py-3 px-4">Batch limit</th>
                   <th className="text-left py-3 px-4">Sold / Remaining</th>
+                  <th className="text-left py-3 px-4">Manual adjust</th>
                 </tr>
               </thead>
               <tbody>
@@ -196,6 +241,36 @@ export default function WeeklyMenuManager() {
                         ) : (
                           <span className="text-gray-400">—</span>
                         )}
+                      </td>
+                      <td className="py-3 px-4">
+                        <div className="flex items-center gap-2">
+                          <input
+                            type="number"
+                            min="1"
+                            disabled={!c.included || remaining <= 0}
+                            placeholder="1"
+                            value={adjustAmounts[c.cookieId] ?? ""}
+                            onChange={(e) =>
+                              setAdjustAmounts((prev) => ({
+                                ...prev,
+                                [c.cookieId]: e.target.value,
+                              }))
+                            }
+                            className="w-16 border border-gray-300 rounded-lg px-2 py-1 text-gray-900 disabled:bg-gray-100 disabled:text-gray-400"
+                          />
+                          <button
+                            onClick={() => handleManualAdjust(c.cookieId)}
+                            disabled={
+                              !c.included ||
+                              remaining <= 0 ||
+                              adjustingId === c.cookieId
+                            }
+                            title="Record a manual sale, waste, or offline adjustment"
+                            className="text-xs font-semibold bg-red-100 hover:bg-red-200 text-red-700 px-3 py-1.5 rounded-lg disabled:opacity-50 disabled:cursor-not-allowed"
+                          >
+                            {adjustingId === c.cookieId ? "..." : "− Decrease"}
+                          </button>
+                        </div>
                       </td>
                     </tr>
                   );
