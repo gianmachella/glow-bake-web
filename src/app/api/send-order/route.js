@@ -6,7 +6,7 @@ import { parseJsonBody } from "@/lib/validate";
 import { apiError } from "@/lib/apiResponse";
 import { computeLineItems } from "@/lib/discounts";
 import { startOfDay } from "@/lib/dateWindow";
-import { getWeekStart } from "@/lib/weekWindow";
+import { getEffectiveWeekStart } from "@/lib/weekWindow";
 
 class StockError extends Error {
   constructor(cookieName, remaining) {
@@ -151,12 +151,13 @@ export async function POST(req) {
     // (FOR UPDATE) each cookie's current-week WeeklyMenuItem so concurrent
     // checkouts can't both succeed past the batch limit; any item that isn't
     // active in this week's menu, or doesn't have enough remaining, aborts the
-    // whole order with a StockError instead of partially selling it.
-    const weekStart = getWeekStart();
-
+    // whole order with a StockError instead of partially selling it. The week
+    // is resolved the same way as the storefront's /api/weekly-menu/active, so
+    // a carried-over menu stays sellable.
     let sale;
     try {
       sale = await prisma.$transaction(async (tx) => {
+        const weekStart = await getEffectiveWeekStart(tx);
         for (const item of computedItems) {
           const [menuItem] = await tx.$queryRaw`
             SELECT id, batchLimit, sold, active FROM WeeklyMenuItem

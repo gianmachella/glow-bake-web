@@ -4,7 +4,7 @@ import { z } from "zod";
 import prisma from "@/lib/prisma";
 import { requireAdmin } from "@/lib/apiAuth";
 import { parseJsonBody } from "@/lib/validate";
-import { getWeekStart } from "@/lib/weekWindow";
+import { getEffectiveWeekStart } from "@/lib/weekWindow";
 import { adjustWeeklySold } from "@/lib/weeklyStock";
 
 const saleItemSchema = z.object({
@@ -79,9 +79,8 @@ export async function POST(req) {
       },
     });
 
-    const weekStart = getWeekStart();
-
     const sale = await prisma.$transaction(async (tx) => {
+      const weekStart = await getEffectiveWeekStart(tx);
       const newSale = await tx.sale.create({
         data: {
           total,
@@ -224,9 +223,9 @@ export async function DELETE(req) {
       return NextResponse.json({ error: "Sale not found" }, { status: 404 });
     }
 
-    const weekStart = getWeekStart(sale.createdAt);
-
     const deletedSale = await prisma.$transaction(async (tx) => {
+      // Restore stock to the menu week the sale was originally counted against.
+      const weekStart = await getEffectiveWeekStart(tx, sale.createdAt);
       for (const item of sale.items) {
         await adjustWeeklySold(tx, item.cookieId, weekStart, -item.quantity);
       }

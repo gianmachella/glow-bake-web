@@ -3,7 +3,7 @@ import prisma from "@/lib/prisma";
 import { requireAdmin } from "@/lib/apiAuth";
 import { parseJsonBody } from "@/lib/validate";
 import { apiError, apiSuccess } from "@/lib/apiResponse";
-import { parseWeekStart } from "@/lib/weekWindow";
+import { getEffectiveWeekStart, parseWeekStart } from "@/lib/weekWindow";
 import { adjustWeeklySold } from "@/lib/weeklyStock";
 
 const adjustSchema = z.object({
@@ -25,10 +25,12 @@ export async function POST(req) {
     const { data, response } = await parseJsonBody(req, adjustSchema);
     if (response) return response;
 
-    const weekStart = parseWeekStart(data.weekStart);
-    const updated = await prisma.$transaction((tx) =>
-      adjustWeeklySold(tx, data.cookieId, weekStart, data.amount)
-    );
+    // A week with no saved menu of its own edits the carried-over week's
+    // rows, which are the ones the admin page and storefront are showing.
+    const updated = await prisma.$transaction(async (tx) => {
+      const weekStart = await getEffectiveWeekStart(tx, parseWeekStart(data.weekStart));
+      return adjustWeeklySold(tx, data.cookieId, weekStart, data.amount);
+    });
 
     if (!updated) {
       return apiError("This cookie isn't on the menu for that week", 404);

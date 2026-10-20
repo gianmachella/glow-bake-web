@@ -39,7 +39,7 @@ function CampaignBanner({ campaign }) {
         <span className="inline-block px-4 py-1.5 bg-pink-100 text-pink-600 rounded-full text-xs font-bold uppercase tracking-widest mb-4">
           Limited Time Offer
         </span>
-        <h2 className="text-4xl md:text-5xl font-black text-pink-600 mb-4 italic tracking-tight">
+        <h2 className="font-display text-4xl md:text-5xl font-semibold text-pink-600 mb-4 tracking-tight text-balance">
           {campaign.name}
         </h2>
         {campaign.description && (
@@ -88,7 +88,7 @@ function WebPromotionBanner({ promotion }) {
       )}
 
       <header>
-        <h2 className="text-4xl md:text-5xl font-black text-pink-600 mb-4 italic tracking-tight">
+        <h2 className="font-display text-4xl md:text-5xl font-semibold text-pink-600 mb-4 tracking-tight text-balance">
           {promotion.name}
         </h2>
         {promotion.description && (
