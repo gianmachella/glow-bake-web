@@ -3,7 +3,7 @@ import prisma from "@/lib/prisma";
 import { requireAdmin } from "@/lib/apiAuth";
 import { parseJsonBody } from "@/lib/validate";
 import { apiError, apiSuccess } from "@/lib/apiResponse";
-import { parseWeekStart } from "@/lib/weekWindow";
+import { getEffectiveWeekStart, parseWeekStart } from "@/lib/weekWindow";
 
 const resetSchema = z.object({
   cookieId: z.string().min(1),
@@ -23,7 +23,11 @@ export async function POST(req) {
     const { data, response } = await parseJsonBody(req, resetSchema);
     if (response) return response;
 
-    const weekStart = parseWeekStart(data.weekStart);
+    // Same carried-over week resolution as /api/weekly-menu/adjust.
+    const weekStart = await getEffectiveWeekStart(
+      prisma,
+      parseWeekStart(data.weekStart)
+    );
     const existing = await prisma.weeklyMenuItem.findUnique({
       where: { cookieId_weekStart: { cookieId: data.cookieId, weekStart } },
     });

@@ -220,7 +220,7 @@ export default function CookieDetailPage({ params }) {
             <Link key={c.id} href={`/cookies/${c.id}`}>
               <div className="bg-white shadow rounded-lg p-3 flex flex-col items-center hover:scale-105 transition">
                 <Image
-                  src={c.image}
+                  src={c.image || "/images/logo-circle.png"}
                   alt={c.name}
                   width={96}
                   height={96}

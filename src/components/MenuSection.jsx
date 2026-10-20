@@ -15,7 +15,7 @@ export default function MenuSection() {
         const res = await fetch("/api/weekly-menu/active");
         if (!res.ok) throw new Error("Error al cargar el menú semanal");
         const data = await res.json();
-        setCookies(data.cookies);
+        setCookies(Array.isArray(data.cookies) ? data.cookies : []);
       } catch (err) {
         console.error("❌ Error cargando cookies:", err);
       }

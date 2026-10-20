@@ -28,6 +28,7 @@ export default function WeeklyMenuManager() {
     toDateInputValue(mondayOf(new Date()))
   );
   const [cookies, setCookies] = useState([]);
+  const [carriedFrom, setCarriedFrom] = useState(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [adjustAmounts, setAdjustAmounts] = useState({});
@@ -42,7 +43,8 @@ export default function WeeklyMenuManager() {
         const res = await fetch(`/api/weekly-menu?week=${weekStart}`);
         if (!res.ok) throw new Error("Failed to load weekly menu");
         const data = await res.json();
-        setCookies(data.cookies);
+        setCookies(data.cookies ?? []);
+        setCarriedFrom(data.carriedOver ? data.sourceWeekStart : null);
       } catch (err) {
         Swal.fire("Error", "Could not load the weekly menu", "error");
       } finally {
@@ -177,7 +179,8 @@ export default function WeeklyMenuManager() {
       });
       if (!res.ok) throw new Error("Failed to save weekly menu");
       const data = await res.json();
-      setCookies(data.cookies);
+      setCookies(data.cookies ?? []);
+      setCarriedFrom(data.carriedOver ? data.sourceWeekStart : null);
       Swal.fire("Saved", "This week's menu has been updated.", "success");
     } catch (err) {
       Swal.fire("Error", "Could not save the weekly menu", "error");
@@ -208,6 +211,15 @@ export default function WeeklyMenuManager() {
         <Loading isVisible />
       ) : (
         <>
+          {carriedFrom && (
+            <div className="bg-amber-50 border border-amber-200 text-amber-800 text-sm rounded-xl px-4 py-3">
+              No menu has been saved for this week yet, so the menu from the
+              week of {toDateInputValue(new Date(carriedFrom))} is still
+              published (same cookies and remaining stock). Saving will publish
+              it as this week&apos;s menu with a fresh batch.
+            </div>
+          )}
+
           <div className="bg-white rounded-2xl shadow-md overflow-hidden">
             <table className="w-full text-sm">
               <thead className="bg-pink-100 text-pink-800">

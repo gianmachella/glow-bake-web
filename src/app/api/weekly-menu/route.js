@@ -3,7 +3,7 @@ import prisma from "@/lib/prisma";
 import { requireAdmin } from "@/lib/apiAuth";
 import { parseJsonBody } from "@/lib/validate";
 import { apiError, apiSuccess } from "@/lib/apiResponse";
-import { parseWeekStart } from "@/lib/weekWindow";
+import { getEffectiveWeekStart, parseWeekStart } from "@/lib/weekWindow";
 
 const weeklyMenuUpdateSchema = z.object({
   weekStart: z.string().min(1),
@@ -16,6 +16,12 @@ const weeklyMenuUpdateSchema = z.object({
 });
 
 async function buildWeekView(weekStart) {
+  // A week with no saved menu of its own shows the carried-over week's rows
+  // (what the storefront is actually serving), flagged `carriedOver` so the
+  // admin knows saving will publish it as this week's fresh batch.
+  const sourceWeekStart = await getEffectiveWeekStart(prisma, weekStart);
+  const carriedOver = sourceWeekStart.getTime() !== weekStart.getTime();
+
   // Every cookie in the catalog is listed here, regardless of its `visible`
   // flag — the admin needs to see (and be able to toggle on) the full set,
   // not just whatever already happens to be shown on the storefront.
@@ -24,7 +30,7 @@ async function buildWeekView(weekStart) {
       orderBy: { name: "asc" },
       select: { id: true, name: true, image: true, price: true, visible: true },
     }),
-    prisma.weeklyMenuItem.findMany({ where: { weekStart } }),
+    prisma.weeklyMenuItem.findMany({ where: { weekStart: sourceWeekStart } }),
   ]);
 
   const itemByCookieId = new Map(menuItems.map((i) => [i.cookieId, i]));
@@ -45,7 +51,7 @@ async function buildWeekView(weekStart) {
     };
   });
 
-  return { weekStart, cookies: cookiesView };
+  return { weekStart, sourceWeekStart, carriedOver, cookies: cookiesView };
 }
 
 // GET /api/weekly-menu?week=YYYY-MM-DD — admin view of every cookie in the
@@ -69,7 +75,9 @@ export async function GET(req) {
 // Body: { weekStart, items: [{ cookieId, batchLimit }] }. Cookies included get
 // upserted active with the given batchLimit; any cookie previously assigned to
 // that week but left out of the payload is marked inactive (its `sold` count,
-// and history, is kept rather than deleted).
+// and history, is kept rather than deleted). Saving a week that was showing a
+// carried-over menu creates that week's own rows, starting a fresh batch
+// (sold = 0); the earlier week's rows are left untouched.
 export async function PUT(req) {
   const { unauthorized } = await requireAdmin();
   if (unauthorized) return unauthorized;

@@ -42,8 +42,10 @@ export default function CookieCard({ cookie, index }) {
         />
       )}
 
+      {/* pointer-events-none: the card stays in the grid and its "More
+          Details" links stay clickable while sold out. */}
       {soldOut && (
-        <div className="absolute inset-0 z-20 flex items-center justify-center bg-white/70 rounded-2xl">
+        <div className="pointer-events-none absolute inset-0 z-20 flex items-center justify-center bg-white/70 rounded-2xl">
           <span className="bg-gray-900 text-white text-sm font-bold uppercase tracking-wide px-4 py-2 rounded-full -rotate-6 shadow-lg">
             Sold Out
           </span>
@@ -54,7 +56,7 @@ export default function CookieCard({ cookie, index }) {
       <div className="flex justify-center mb-4">
         <div className="relative w-32 h-32 sm:w-40 sm:h-40 rounded-full overflow-hidden border-4 border-pink-200">
           <Image
-            src={cookie.image}
+            src={cookie.image || "/images/logo-circle.png"}
             alt={cookie.name}
             fill
             sizes="(min-width: 640px) 10rem, 8rem"
@@ -98,7 +100,7 @@ export default function CookieCard({ cookie, index }) {
         <div className="flex items-center gap-2 justify-center sm:justify-start">
           <button
             onClick={() => setCount((prev) => Math.max(1, prev - 1))}
-            disabled={count <= 1}
+            disabled={soldOut || count <= 1}
             className="w-8 h-8 rounded-full bg-gray-300 hover:bg-pink-500 hover:text-white text-gray-800"
           >
             -
@@ -112,7 +114,7 @@ export default function CookieCard({ cookie, index }) {
                 hasStockInfo ? Math.min(cookie.remaining, prev + 1) : prev + 1
               )
             }
-            disabled={hasStockInfo && count >= cookie.remaining}
+            disabled={soldOut || (hasStockInfo && count >= cookie.remaining)}
             className="w-8 h-8 rounded-full bg-gray-300 hover:bg-pink-500 hover:text-white text-gray-800 disabled:opacity-50 disabled:hover:bg-gray-300 disabled:hover:text-gray-800"
           >
             +
