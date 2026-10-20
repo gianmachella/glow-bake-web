@@ -3,6 +3,8 @@
 import { ChevronLeft, ChevronRight, Play, X } from "lucide-react";
 import { useEffect, useState } from "react";
 
+import SectionHeading from "@/components/motion/SectionHeading";
+
 export default function MediaGallery() {
   const [items, setItems] = useState(null); // null = still loading
   const [lightboxIndex, setLightboxIndex] = useState(null);
@@ -63,10 +65,8 @@ export default function MediaGallery() {
   const showPrev = () => setLightboxIndex((i) => (i - 1 + items.length) % items.length);
 
   return (
-    <section className="w-full px-6 py-20 bg-gradient-to-b from-white to-pink-50">
-      <h2 className="text-center text-3xl md:text-5xl font-script text-pink-700 mb-12">
-        From Our Kitchen
-      </h2>
+    <section className="w-full px-6 py-24 md:py-32 bg-gradient-to-b from-white to-pink-50">
+      <SectionHeading eyebrow="Behind the scenes" title="From our kitchen" />
 
       <div className="max-w-6xl mx-auto columns-2 sm:columns-3 lg:columns-4 gap-4 space-y-4">
         {items.map((item, index) => (

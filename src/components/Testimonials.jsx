@@ -1,7 +1,11 @@
 "use client";
 
+import { AnimatePresence, motion } from "framer-motion";
 import { useEffect, useState } from "react";
+
 import Image from "next/image";
+import Parallax from "@/components/motion/Parallax";
+import SectionHeading from "@/components/motion/SectionHeading";
 
 const testimonials = [
   {
@@ -25,43 +29,88 @@ const testimonials = [
   },
 ];
 
+const ROTATE_MS = 6000;
+
 export default function Testimonials() {
   const [current, setCurrent] = useState(0);
+  const [paused, setPaused] = useState(false);
 
+  // Re-armed whenever `current` changes, so picking a dot restarts the timer
+  // instead of jumping again moments later.
   useEffect(() => {
-    const interval = setInterval(() => {
+    if (paused) return;
+    const timer = setTimeout(() => {
       setCurrent((prev) => (prev + 1) % testimonials.length);
-    }, 6000);
-    return () => clearInterval(interval);
-  }, []);
+    }, ROTATE_MS);
+    return () => clearTimeout(timer);
+  }, [current, paused]);
+
+  const testimonial = testimonials[current];
 
   return (
     <section
       id="testimonials"
-      className="relative bg-pink-50 px-6 py-60 overflow-hidden"
+      className="relative isolate overflow-hidden bg-pink-50 px-6 py-28 md:py-40"
     >
-      {/* Imagen de fondo con opacidad */}
-      <Image
-        src="/images/testimonials-bg.png"
-        alt="Testimonials Background"
-        fill
-        sizes="100vw"
-        className="object-cover opacity-10 pointer-events-none"
-      />
+      {/* Background texture drifts slower than the page */}
+      <Parallax distance={80} className="absolute inset-x-0 -top-24 -bottom-24 -z-10">
+        <div className="relative h-full w-full">
+          <Image
+            src="/images/testimonials-bg.png"
+            alt=""
+            fill
+            sizes="100vw"
+            className="object-cover opacity-10 pointer-events-none"
+          />
+        </div>
+      </Parallax>
 
-      {/* Contenido por encima */}
-      <div className="relative z-10">
-        <h2 className="text-center text-3xl md:text-5xl font-script text-pink-700 mb-12">
-          What People Say
-        </h2>
+      <SectionHeading eyebrow="Sweet words" title="What people say" />
 
-        <div className="max-w-3xl mx-auto text-center transition-opacity duration-700 ease-in-out">
-          <p className="text-lg italic text-gray-800 mb-4">
-            “{testimonials[current].quote}”
-          </p>
-          <p className="font-semibold text-pink-700">
-            — {testimonials[current].name}
-          </p>
+      <div
+        className="relative mx-auto max-w-3xl"
+        onMouseEnter={() => setPaused(true)}
+        onMouseLeave={() => setPaused(false)}
+      >
+        <div className="relative min-h-[17rem] sm:min-h-[15rem] rounded-[2.5rem] bg-white/80 px-8 py-12 sm:px-14 shadow-xl shadow-pink-900/5 ring-1 ring-pink-100 backdrop-blur">
+          <span
+            aria-hidden
+            className="absolute -top-8 left-8 font-display text-[7rem] leading-none text-pink-300 select-none"
+          >
+            “
+          </span>
+
+          <AnimatePresence mode="wait">
+            <motion.figure
+              key={current}
+              initial={{ opacity: 0, y: 14 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -14 }}
+              transition={{ duration: 0.5, ease: [0.22, 1, 0.36, 1] }}
+              className="text-center"
+            >
+              <blockquote className="font-display text-xl sm:text-2xl md:text-[1.7rem] italic leading-snug text-stone-800 text-balance">
+                {testimonial.quote}
+              </blockquote>
+              <figcaption className="mt-6 text-sm font-semibold uppercase tracking-[0.2em] text-pink-600">
+                {testimonial.name}
+              </figcaption>
+            </motion.figure>
+          </AnimatePresence>
+        </div>
+
+        <div className="mt-8 flex justify-center gap-2">
+          {testimonials.map((t, i) => (
+            <button
+              key={t.name}
+              onClick={() => setCurrent(i)}
+              aria-label={`Show testimonial from ${t.name}`}
+              aria-current={i === current}
+              className={`h-2.5 rounded-full transition-all duration-300 ${
+                i === current ? "w-8 bg-pink-500" : "w-2.5 bg-pink-200 hover:bg-pink-300"
+              }`}
+            />
+          ))}
         </div>
       </div>
     </section>

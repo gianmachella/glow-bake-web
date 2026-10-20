@@ -1,5 +1,7 @@
 "use client";
 
+import Reveal from "@/components/motion/Reveal";
+import SectionHeading from "@/components/motion/SectionHeading";
 import Swal from "sweetalert2";
 import { useState } from "react";
 
@@ -43,23 +45,25 @@ export default function ContactSection() {
   };
 
   return (
-    <section id="contact" className="w-full px-6 py-20 bg-white">
-      <div className="max-w-4xl mx-auto text-center">
-        <h2 className="text-3xl md:text-5xl font-script text-pink-700 mb-6">
-          Contact Us
-        </h2>
-        <p className="text-gray-700 text-base md:text-lg mb-10">
-          Have a question, want to place a custom order, or just want to say hi?
-          We’d love to hear from you!
-        </p>
-        <form onSubmit={handleSubmit} className="grid gap-6 text-left">
+    <section id="contact" className="w-full px-6 py-24 md:py-32 bg-[#fffaf7]">
+      <div className="max-w-3xl mx-auto">
+        <SectionHeading
+          eyebrow="Say hello"
+          title="Contact us"
+          lead="Have a question, want to place a custom order, or just want to say hi? We’d love to hear from you!"
+        />
+        <Reveal
+          as="form"
+          onSubmit={handleSubmit}
+          className="grid gap-5 text-left rounded-[2rem] bg-white p-6 sm:p-10 shadow-xl shadow-pink-900/5 ring-1 ring-pink-100"
+        >
           <div>
             <input
               type="text"
               placeholder="Your Name"
               value={name}
               onChange={(e) => setName(e.target.value)}
-              className="w-full px-4 py-3 border border-gray-300 rounded text-gray-800 placeholder-gray-500"
+              className="w-full px-5 py-3.5 rounded-2xl border border-stone-200 bg-stone-50/60 text-stone-800 placeholder-stone-400 transition focus:bg-white focus:border-pink-400 focus:outline-none focus:ring-4 focus:ring-pink-100"
             />
             {errors.name && (
               <p className="text-red-500 text-sm mt-1">{errors.name}</p>
@@ -71,7 +75,7 @@ export default function ContactSection() {
               placeholder="Your Email"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
-              className="w-full px-4 py-3 border border-gray-300 rounded text-gray-800 placeholder-gray-500"
+              className="w-full px-5 py-3.5 rounded-2xl border border-stone-200 bg-stone-50/60 text-stone-800 placeholder-stone-400 transition focus:bg-white focus:border-pink-400 focus:outline-none focus:ring-4 focus:ring-pink-100"
             />
             {errors.email && (
               <p className="text-red-500 text-sm mt-1">{errors.email}</p>
@@ -83,7 +87,7 @@ export default function ContactSection() {
               placeholder="Your Message"
               value={message}
               onChange={(e) => setMessage(e.target.value)}
-              className="w-full px-4 py-3 border border-gray-300 rounded text-gray-800 placeholder-gray-500"
+              className="w-full px-5 py-3.5 rounded-2xl border border-stone-200 bg-stone-50/60 text-stone-800 placeholder-stone-400 transition focus:bg-white focus:border-pink-400 focus:outline-none focus:ring-4 focus:ring-pink-100"
             />
             {errors.message && (
               <p className="text-red-500 text-sm mt-1">{errors.message}</p>
@@ -91,11 +95,11 @@ export default function ContactSection() {
           </div>
           <button
             type="submit"
-            className="bg-pink-600 text-white px-6 py-3 rounded hover:bg-pink-700 transition"
+            className="justify-self-center sm:justify-self-end rounded-full bg-pink-600 px-8 py-3.5 text-sm font-semibold text-white shadow-lg shadow-pink-600/20 transition hover:-translate-y-0.5 hover:bg-pink-700 active:scale-95"
           >
             Send Message
           </button>
-        </form>
+        </Reveal>
       </div>
     </section>
   );
